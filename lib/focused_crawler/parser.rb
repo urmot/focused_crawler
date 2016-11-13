@@ -27,6 +27,7 @@ module FocusedCrawler
     def pages
       Dir.glob('pages/*').map do |path|
         page = File.read path
+        File.delete path
         Nokogiri::HTML page
       end
     end
