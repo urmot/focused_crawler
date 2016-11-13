@@ -36,16 +36,18 @@ class CrawlerTest < Minitest::Test
   end
 
   def test_that_it_should_be_truly_when_crawler_is_ready
-    urls_example
-    assert { true == @crawler.ready? }
+    in_test_urls do
+      assert { true == @crawler.ready? }
+    end
   end
 
   def test_that_it_should_write_pages_at_urls
-    urls_example
-    FocusedCrawler::Page.stub_any_instance(:page, 'test') do
-      @crawler.crawl
-      pages = Dir.glob('pages/*')
-      assert { 3 == pages.size }
+    in_test_urls do
+      FocusedCrawler::Page.stub_any_instance(:page, 'test') do
+        @crawler.crawl
+        pages = Dir.glob('pages/*')
+        assert { 3 == pages.size }
+      end
     end
   end
 
