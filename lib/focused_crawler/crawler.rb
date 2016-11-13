@@ -20,7 +20,7 @@ module FocusedCrawler
     end
 
     def prepared?
-      ready unless Dir.glob('urls/*').empty? || busy?
+      ready unless Dir.glob('urls/*.json').empty? || busy?
       ready?
     end
 
