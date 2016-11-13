@@ -2,13 +2,24 @@ require 'nokogiri'
 
 module FocusedCrawler
   class Parser
+    include STATE
+
+    def run
+      return unless prepared?
+
+      busy
+      parse
+      wait
+    end
+
     def parse
       pages.each do |page|
       end
     end
 
-    def ready?
-      !Dir.glob('pages/*').empty?
+    def prepared?
+      ready unless Dir.glob('pages/*').empty? || busy?
+      ready?
     end
 
     private
