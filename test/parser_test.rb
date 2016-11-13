@@ -7,12 +7,12 @@ class ParserTest < Minitest::Test
 
   def test_that_it_should_be_truly_when_parser_is_ready
     in_test_pages do
-      assert { true == @parser.ready? }
+      assert { true == @parser.prepared? }
     end
   end
 
   def test_that_it_should_be_falsely_when_parser_is_not_ready
     Dir.glob('pages/*').each {|path| File.delete path }
-    assert { false == @parser.ready? }
+    assert { false == @parser.prepared? }
   end
 end

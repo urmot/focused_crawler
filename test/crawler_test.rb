@@ -14,12 +14,12 @@ class CrawlerTest < Minitest::Test
 
   def test_that_it_shoud_be_falsly_when_crawler_is_not_ready
     Dir.glob('urls/*').each {|path| File.delete path }
-    assert { false == @crawler.ready? }
+    assert { false == @crawler.prepared? }
   end
 
   def test_that_it_should_be_truly_when_crawler_is_ready
     in_test_urls do
-      assert { true == @crawler.ready? }
+      assert { true == @crawler.prepared? }
     end
   end
 

@@ -2,6 +2,16 @@ require 'json'
 
 module FocusedCrawler
   class Crawler
+    include STATE
+
+    def run
+      return unless prepared?
+
+      busy
+      crawl
+      wait
+    end
+
     def crawl
       pages.each do |page|
         next if page.crawled?
@@ -9,8 +19,9 @@ module FocusedCrawler
       end
     end
 
-    def ready?
-      !Dir.glob('urls/*').empty?
+    def prepared?
+      ready unless Dir.glob('urls/*').empty? || busy?
+      ready?
     end
 
     private
