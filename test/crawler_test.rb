@@ -14,20 +14,20 @@ class CrawlerTest < Minitest::Test
 
   def test_that_it_should_get_urls_from_urls_directory
     urls_example
-    assert { 3 == @crawler.urls.size }
+    assert { 3 == @crawler.pages.size }
   end
 
   def test_that_it_should_return_uniq_url_list
     urls_example
     urls_example
-    assert { 3 == @crawler.urls.size }
+    assert { 3 == @crawler.pages.size }
   end
 
   def test_that_it_should_return_sorted_url_list_by_score
     urls_example
-    urls = @crawler.urls
-    expect = 3.times {|i| "http://test#{i}.com" }
-    assert expect, urls
+    pages = @crawler.pages
+    expect = 3.times {|i| FocusedCrawler::Page.new("http://test#{i}.com") }
+    assert expect, pages
   end
 
   def test_that_it_shoud_be_falsly_when_crawler_is_not_ready
