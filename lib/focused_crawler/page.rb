@@ -22,8 +22,9 @@ module FocusedCrawler
     end
 
     def path
+      return @path unless @path.nil?
       filename = Digest::SHA1.hexdigest url
-      File.join directory, filename
+      @path ||= File.join directory, filename
     end
 
     def directory

@@ -13,7 +13,9 @@ module FocusedCrawler
     end
 
     def parse
-      pages.each do |page|
+      documents.each do |document|
+        next unless document.related?
+        document.save
       end
     end
 
@@ -24,10 +26,12 @@ module FocusedCrawler
 
     private
 
-    def pages
+    def documents
       Dir.glob('pages/*').map do |path|
-        page = File.read path
-        Nokogiri::HTML page
+        document = File.read path
+        File.delete path
+        nokogiri = Nokogiri::HTML.parse document
+        Document.new(nokogiri)
       end
     end
   end
