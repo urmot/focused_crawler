@@ -5,7 +5,10 @@ require 'focused_crawler/page'
 require 'focused_crawler/parser'
 require 'focused_crawler/document'
 require 'focused_crawler/classifier'
+require 'focused_crawler/brain'
 
 module FocusedCrawler
-  # Your code goes here...
+  def self.run
+    Brain.new.start
+  end
 end
