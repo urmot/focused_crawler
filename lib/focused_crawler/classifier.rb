@@ -3,7 +3,7 @@ module FocusedCrawler
     attr_accessor :threshold
 
     def initialize(threshold = 0.5)
-      # @calc = RelevanceCalculator.new
+      @calc = RelevanceCalculator.new
       @threshold = threshold
     end
 
@@ -19,7 +19,7 @@ module FocusedCrawler
     end
 
     def similarity
-      # @calc.calculate @document.body
+      @calc.calculate @document.body
     end
   end
 end
