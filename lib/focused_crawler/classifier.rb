@@ -15,8 +15,11 @@ module FocusedCrawler
     end
 
     def related?
-      # similarity = @calc.calculate @document.body
-      # similarity >= threshold
+      similarity >= threshold
+    end
+
+    def similarity
+      # @calc.calculate @document.body
     end
   end
 end
