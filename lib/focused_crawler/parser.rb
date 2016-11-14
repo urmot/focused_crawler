@@ -4,6 +4,11 @@ module FocusedCrawler
   class Parser
     include STATE
 
+    def initialize
+      @classifier = Classifier.new
+      # @distiller = Distiller.new
+    end
+
     def run
       return unless prepared?
 
@@ -14,8 +19,8 @@ module FocusedCrawler
 
     def parse
       documents.each do |document|
-        next unless document.related?
-        document.save
+        @classifier.classify document
+        # @distiller.distill document
       end
     end
 
@@ -28,11 +33,13 @@ module FocusedCrawler
 
     def documents
       Dir.glob('pages/*').map do |path|
-        document = File.read path
-        File.delete path
-        nokogiri = Nokogiri::HTML.parse document
-        Document.new(nokogiri)
+        Document.new(path)
       end
+    end
+
+    def save(links)
+      filename = Digest::SHA1.hexdigest links.first[:url]
+      File.write "links/#{filename}.json", links.to_json
     end
   end
 end
