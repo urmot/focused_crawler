@@ -13,7 +13,7 @@ class CrawlerTest < Minitest::Test
   end
 
   def test_that_it_shoud_be_falsly_when_crawler_is_not_ready
-    Dir.glob('urls/*').each {|path| File.delete path }
+    Dir.glob('urls/*.json').each {|path| File.delete path }
     assert { false == @crawler.prepared? }
   end
 

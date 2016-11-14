@@ -3,7 +3,10 @@ require 'focused_crawler/state'
 require 'focused_crawler/crawler'
 require 'focused_crawler/page'
 require 'focused_crawler/parser'
+require 'focused_crawler/brain'
 
 module FocusedCrawler
-  # Your code goes here...
+  def self.run
+    Brain.new.start
+  end
 end
