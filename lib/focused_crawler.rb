@@ -6,7 +6,7 @@ require 'focused_crawler/parser'
 require 'focused_crawler/brain'
 
 module FocusedCrawler
-  def sef.run
+  def self.run
     Brain.new.start
   end
 end
