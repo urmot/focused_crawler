@@ -14,12 +14,12 @@ module FocusedCrawler
     def prepare
       return if prepared?
       # TODO: Add prepare related words
-      seed_urls = { url: 'http://yahoo.co.jp', score: 0 }.to_json
-      File.write 'urls/seed.json', seed_urls
+      seed_links = { url: 'http://yahoo.co.jp', score: 0 }.to_json
+      File.write 'links/seed.json', seed_links
     end
 
     def prepared?
-      !Dir.glob('urls/*.json').empty? # && related words does set?
+      !Dir.glob('links/*.json').empty? # && related words does set?
     end
 
     def crawl
