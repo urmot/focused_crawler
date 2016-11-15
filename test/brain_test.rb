@@ -24,10 +24,12 @@ class BrainTest < Minitest::Test
     end
   end
 
-  def test_that_it_should_be_finish
-    FocusedCrawler::Page.stub_any_instance(:page, 'test') do
-      @brain.start
-      assert true
+  def test_that_it_should_be_finish_when_crawler_and_parser_are_waiting
+    in_test_urls do
+      FocusedCrawler::Page.stub_any_instance(:page, 'test') do
+        @brain.start
+        assert true
+      end
     end
   end
 end
