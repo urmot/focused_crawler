@@ -14,7 +14,7 @@ module FocusedCrawler
     def prepare
       return if prepared?
       # TODO: Add prepare related words
-      seed_urls = { url: 'http://yahoo.cp.jp', score: 0 }.to_json
+      seed_urls = { url: 'http://yahoo.co.jp', score: 0 }.to_json
       File.write 'urls/seed.json', seed_urls
     end
 
@@ -25,7 +25,6 @@ module FocusedCrawler
     def crawl
       Thread.new do
         loop do
-          sleep 3 unless @crawler.prepared?
           @crawler.run
           break if finish?
         end
@@ -35,7 +34,6 @@ module FocusedCrawler
     def parse
       Thread.new do
         loop do
-          sleep 3 unless @parser.prepared?
           @parser.run
           break if finish?
         end
