@@ -24,7 +24,7 @@ module FocusedCrawler
     end
 
     def waiting?
-      state == waiting?
+      state == WAIT
     end
 
     private
@@ -43,7 +43,7 @@ module FocusedCrawler
     end
 
     def wait
-      warn 'warning: You change state to wait not from busy.' unless busy?
+      warn 'warning: You change state to wait from ready.' if ready?
       @state = WAIT
     end
   end
