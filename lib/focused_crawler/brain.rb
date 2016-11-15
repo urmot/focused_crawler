@@ -25,7 +25,6 @@ module FocusedCrawler
     def crawl
       Thread.new do
         loop do
-          sleep 3 unless @crawler.prepared?
           @crawler.run
           break if finish?
         end
@@ -35,7 +34,6 @@ module FocusedCrawler
     def parse
       Thread.new do
         loop do
-          sleep 3 unless @parser.prepared?
           @parser.run
           break if finish?
         end

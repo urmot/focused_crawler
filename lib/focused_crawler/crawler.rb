@@ -5,11 +5,10 @@ module FocusedCrawler
     include STATE
 
     def run
-      return unless prepared?
+      return wait unless prepared?
 
       busy
       crawl
-      wait
     end
 
     def crawl
@@ -20,8 +19,7 @@ module FocusedCrawler
     end
 
     def prepared?
-      ready unless Dir.glob('urls/*.json').empty? || busy?
-      ready?
+      !Dir.glob('urls/*.json').empty?
     end
 
     private

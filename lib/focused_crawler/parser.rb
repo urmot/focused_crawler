@@ -10,11 +10,10 @@ module FocusedCrawler
     end
 
     def run
-      return unless prepared?
+      return wait unless prepared?
 
       busy
       parse
-      wait
     end
 
     def parse
@@ -25,8 +24,7 @@ module FocusedCrawler
     end
 
     def prepared?
-      ready unless Dir.glob('pages/*').empty? || busy?
-      ready?
+      !Dir.glob('pages/*').empty? || busy?
     end
 
     private
