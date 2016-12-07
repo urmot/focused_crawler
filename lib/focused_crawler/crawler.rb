@@ -5,11 +5,10 @@ module FocusedCrawler
     include STATE
 
     def run
-      return unless prepared?
+      return wait unless prepared?
 
       busy
       crawl
-      wait
     end
 
     def crawl
@@ -20,23 +19,22 @@ module FocusedCrawler
     end
 
     def prepared?
-      ready unless Dir.glob('urls/*').empty? || busy?
-      ready?
+      !Dir.glob('links/*.json').empty?
     end
 
     private
 
     def pages
-      scored_urls = Dir.glob('urls/*').map do |path|
-        json_urls = File.read path
+      scored_links = Dir.glob('links/*').map do |path|
+        json_links = File.read path
         File.delete path
-        JSON.parse json_urls
+        JSON.parse json_links
       end.flatten
-      sort(scored_urls).map {|url| Page.new(url['url']) }
+      sort(scored_links).map {|url| Page.new(url['url']) }
     end
 
-    def sort(scored_urls)
-      scored_urls.uniq {|url| url['url'] }.sort_by {|url| url['score'] }
+    def sort(scored_links)
+      scored_links.uniq {|url| url['url'] }.sort_by {|url| url['score'] }
     end
   end
 end

@@ -8,11 +8,11 @@ require 'minitest/stub_any_instance'
 
 module Minitest
   class Test
-    def in_test_urls
+    def in_test_links
       content = Array.new(3) do |i|
         { url: "http://test#{i}.com", score: i }
       end.to_json
-      tempfile = Tempfile.new(['', '.json'], 'urls')
+      tempfile = Tempfile.new(['', '.json'], 'links')
       File.write tempfile.path, content
       yield
       tempfile.close!
