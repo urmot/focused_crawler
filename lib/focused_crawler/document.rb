@@ -6,5 +6,9 @@ module FocusedCrawler
       @path = path
       @document = Nokogiri::HTML.parse(File.read(path))
     end
+
+    def expand_anchor_texts
+      document
+    end
   end
 end

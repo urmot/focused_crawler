@@ -6,7 +6,7 @@ module FocusedCrawler
 
     def initialize
       @classifier = Classifier.new
-      # @distiller = Distiller.new
+      @distiller = Distiller.new
     end
 
     def run
@@ -17,9 +17,11 @@ module FocusedCrawler
     end
 
     def parse
+      threads = []
       documents.each do |document|
-        @classifier.classify document
-        # @distiller.distill document
+        threads << @classifier.classify(document)
+        threads << @distiller.distill(document)
+        threads.each(&:join)
       end
     end
 
