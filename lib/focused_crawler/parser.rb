@@ -1,43 +1,49 @@
 require 'nokogiri'
+require 'json'
+require 'lingua/stemmer'
 
 module FocusedCrawler
   class Parser
-    include STATE
-
     def initialize
-      @classifier = Classifier.new
-      # @distiller = Distiller.new
+      @stemmer = Lingua::Stemmer.new
     end
 
-    def run
-      return wait unless prepared?
-
-      busy
-      parse
+    def parse(doc)
+      count filtering(split(doc))
     end
 
-    def parse
-      documents.each do |document|
-        @classifier.classify document
-        # @distiller.distill document
+    def count(tokens)
+      number_of_terms = 0
+      term_count_index = tokens.each_with_object(Hash.new(0.0)) do |token, index|
+        index[token] += 1
+        number_of_terms += 1
       end
+      {
+        terms:  term_count_index.keys,
+        counts: term_count_index.values,
+        sum:    number_of_terms
+      }
     end
 
-    def prepared?
-      !Dir.glob('pages/*').empty? || busy?
+    def split(doc)
+      Nokogiri.HTML(doc).css('body').inner_text.scan(/[\p{Alpha}\-']+/).map!(&:downcase)
     end
 
-    private
-
-    def documents
-      Dir.glob('pages/*').map do |path|
-        Document.new(path)
-      end
+    def filtering(terms)
+      terms.reject! {|term| term.size > 32 }
+      stemming stopwords_filtering(terms)
     end
 
-    def save(links)
-      filename = Digest::SHA1.hexdigest links.first[:url]
-      File.write "links/#{filename}.json", links.to_json
+    def stopwords_filtering(terms)
+      terms - stopwords
+    end
+
+    def stemming(terms)
+      terms.map! {|term| @stemmer.stem term }
+    end
+
+    def stopwords
+      @stopwords ||= File.open('data/stopwords.json') {|file| JSON.load file }
     end
   end
 end
