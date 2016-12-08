@@ -6,6 +6,7 @@ require 'focused_crawler/parser'
 require 'focused_crawler/document'
 require 'focused_crawler/classifier'
 require 'focused_crawler/calculator/tf_idf'
+require 'focused_crawler/calculator/cosine_dist'
 require 'focused_crawler/brain'
 
 module FocusedCrawler

@@ -72,7 +72,7 @@ class TFIDFTest < Minitest::Test
       tf_idf.instance_variable_set :@parser, parser
       idf = tf_idf.default_idf
       expect = Vector[2.0*idf/6,2.0*idf/6,1.0*idf/6,1.0*idf/6]
-      assert_equal expect, tf_idf.tf_idf(doc)
+      assert_equal expect, tf_idf[doc]
     end
   end
 

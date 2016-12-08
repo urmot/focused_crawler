@@ -13,7 +13,7 @@ module FocusedCrawler
         before_action
       end
 
-      def tf_idf(document)
+      def [](document)
         terms = @parser.parse(document)
         tfs(terms).map2(idfs(terms[:terms])) do |tf, idf|
           tf * idf
