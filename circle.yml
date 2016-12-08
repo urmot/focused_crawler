@@ -1,0 +1,11 @@
+machine:
+  ruby:
+    version: 2.3.x
+
+dependencies:
+  post:
+    - gem install bundler
+
+test:
+  override:
+    - rake test
