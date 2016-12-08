@@ -1,11 +1,11 @@
 machine:
   ruby:
-    version: 2.3.x
+    version: 2.3.1
 
 dependencies:
-  post:
+  pre:
     - gem install bundler
 
 test:
   override:
-    - rake test
+    - bundle exec rake test
