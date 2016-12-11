@@ -3,32 +3,28 @@ require 'matrix'
 require 'digest/murmurhash'
 
 module FocusedCrawler
-  module Calculator
+  module Classifier
     class TFIDF
       def initialize
-        @parser = Parser.new
-        @number_of_docs = 33_600
         @index = []
         @lexicon = []
+        @idf_base_docs = 33_600
         before_action
       end
 
       def [](document)
-        terms = @parser.parse(document)
-        tfs(terms).map2(idfs(terms[:terms])) do |tf, idf|
+        vtf(document).map2(vidf(document)) do |tf, idf|
           tf * idf
         end
       end
 
-      def tfs(terms)
-        Vector.elements(terms[:counts], false) / terms[:sum]
+      def vtf(document)
+        Vector.elements(document.count_terms.values, false) / document.length
       end
 
-      def idfs(terms)
-        terms.map! do |term|
-          idf(term)
-        end
-        Vector.elements(terms, false)
+      def vidf(document)
+        idfs = document.count_terms.keys.map! { |term| idf(term) }
+        Vector.elements(idfs, false)
       end
 
       def idf(term)
@@ -38,12 +34,12 @@ module FocusedCrawler
         @lexicon[pos]
       end
 
-      def default_idf
-        @default_idf ||= Math.log(@number_of_docs)
-      end
-
       def tid(term)
         Digest::MurmurHash1.rawdigest term
+      end
+
+      def default_idf
+        @default_idf ||= Math.log(@idf_base_docs)
       end
 
       private

@@ -2,7 +2,7 @@ require 'test_helper'
 
 class ParserTest < Minitest::Test
   def setup
-    @parser = FocusedCrawler::Parser.new
+    @parser = FocusedCrawler::Classifier::Parser
   end
 
   def test_that_it_should_remove_stopwords
@@ -26,17 +26,13 @@ class ParserTest < Minitest::Test
   def test_that_it_should_count_term_frequency_for_each_terms
     terms = %w(it is bad it is sad it is happy)
     count = @parser.count(terms)
-    expect = {
-      terms: %w(it is bad sad happy),
-      counts: [3, 3, 1, 1, 1],
-      sum: 9
-    }
+    expect = {"it"=>3.0, "is"=>3.0, "bad"=>1.0, "sad"=>1.0, "happy"=>1.0}
     assert_equal expect, count
   end
 
   def test_that_it_should_split_document_to_terms
     doc = %(It is a test that it should parse document to terms.)
-    terms = @parser.split(doc)
+    terms = @parser.terms(Nokogiri::HTML(doc))
     expect = doc.delete!('.').downcase!.split(' ')
     assert expect, terms
   end

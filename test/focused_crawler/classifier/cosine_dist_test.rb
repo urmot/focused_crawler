@@ -2,7 +2,7 @@ require 'test_helper'
 
 class CosineDistTest < Minitest::Test
   def setup
-    @cosine_dist = FocusedCrawler::Calculator::CosineDist
+    @cosine_dist = FocusedCrawler::Classifier::CosineDist
   end
 
   def test_that_it_should_return_float_value_distination_of_v1_to_v2
@@ -17,8 +17,6 @@ class CosineDistTest < Minitest::Test
     v3 = Vector[7, 7, 7]
     v1_2 = @cosine_dist[v1, v2]
     v1_3 = @cosine_dist[v1, v3]
-    puts v1_2
-    puts v1_3
     assert_equal true, v1_2 > v1_3
   end
 
