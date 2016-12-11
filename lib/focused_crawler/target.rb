@@ -1,5 +1,4 @@
 require 'matrix'
-require 'murmurhash'
 
 module FocusedCrawler
   class Target
