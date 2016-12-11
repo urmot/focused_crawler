@@ -1,49 +1,42 @@
-require 'nokogiri'
 require 'json'
-require 'lingua/stemmer'
+require 'fast_stemmer'
+require 'digest/murmurhash'
 
 module FocusedCrawler
   class Parser
-    def initialize
-      @stemmer = Lingua::Stemmer.new
-    end
+    @stopwords ||= open('data/stopwords.json') {|file| JSON.load file }
 
-    def parse(doc)
-      count filtering(split(doc))
-    end
-
-    def count(tokens)
-      number_of_terms = 0
-      term_count_index = tokens.each_with_object(Hash.new(0.0)) do |token, index|
-        index[token] += 1
-        number_of_terms += 1
+    class << self
+      def parse(document)
+        filtering terms(document)
       end
-      {
-        terms:  term_count_index.keys,
-        counts: term_count_index.values,
-        sum:    number_of_terms
-      }
-    end
 
-    def split(doc)
-      Nokogiri.HTML(doc).css('body').inner_text.scan(/[\p{Alpha}\-']+/).map!(&:downcase)
-    end
+      def count(terms)
+        terms.each_with_object(Hash.new(0.0)) do |term, index|
+          index[tid(term)] += 1
+        end
+      end
 
-    def filtering(terms)
-      terms.reject! {|term| term.size > 32 }
-      stemming stopwords_filtering(terms)
-    end
+      def terms(document)
+        document.css('body').inner_text.scan(/[\p{Alpha}\-']+/).map!(&:downcase)
+      end
 
-    def stopwords_filtering(terms)
-      terms - stopwords
-    end
+      def filtering(terms)
+        terms.reject! {|term| term.size > 32 }
+        stemming stopwords_filtering(terms)
+      end
 
-    def stemming(terms)
-      terms.map! {|term| @stemmer.stem term }
-    end
+      def stopwords_filtering(terms)
+        terms - @stopwords
+      end
 
-    def stopwords
-      @stopwords ||= File.open('data/stopwords.json') {|file| JSON.load file }
+      def stemming(terms)
+        terms.map!(&:stem)
+      end
+
+      def tid(term)
+        Digest::MurmurHash1.rawdigest term
+      end
     end
   end
 end
