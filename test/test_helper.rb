@@ -27,5 +27,9 @@ module Minitest
       yield
       tempfiles.each(&:close!)
     end
+
+    def tid(term)
+      Digest::MurmurHash1.rawdigest term
+    end
   end
 end
