@@ -1,6 +1,5 @@
 require 'json'
 require 'matrix'
-require 'digest/murmurhash'
 
 module FocusedCrawler
   class IDF
