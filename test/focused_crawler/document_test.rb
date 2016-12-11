@@ -2,7 +2,7 @@ require 'test_helper'
 
 class DocumentTest < Minitest::Test
   def setup
-    @document = FocusedCrawler::Classifier::Document.new(document)
+    @document = FocusedCrawler::Document.new(document)
   end
 
   def test_that_it_should_set_instance_of_nokogiri_element
@@ -19,13 +19,35 @@ class DocumentTest < Minitest::Test
   end
 
   def test_that_it_should_count_terms
-    count_terms = { 'test' => 2.0, 'document' => 2.0, 'will' => 1.0 }
+    count_terms = {
+      tid('test')     => 2.0,
+      tid('document') => 2.0,
+      tid('will')     => 1.0
+    }
     assert_equal count_terms, @document.count_terms
   end
 
   def test_that_it_should_extract_links_in_document
     links = ['http://example1.com', 'http://example2.com']
     assert_equal links, @document.links
+  end
+
+  def test_that_it_should_return_vector_of_tf_idf_for_terms_in_document
+    assert_instance_of Vector, @document.tf_idf
+  end
+
+  def test_that_it_should_return_vector_into_tf_idf_values
+    idf = Minitest::Mock.new.expect(:call, 10, [tid('test')])
+                        .expect(:call, 10, [tid('document')])
+                        .expect(:call, 10, [tid('will')])
+    FocusedCrawler::IDF.stub :[], idf do
+      tf_idf = Vector[2.0 * 10 / 5, 2.0 * 10 / 5, 1.0 * 10 / 5]
+      assert_equal tf_idf, @document.tf_idf
+    end
+  end
+
+  def test_that_it_should_return_index_for_tf_idf_values
+    assert_equal [tid('test'), tid('document'), tid('will')], @document.index
   end
 
   def document

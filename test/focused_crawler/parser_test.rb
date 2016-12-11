@@ -1,8 +1,9 @@
 require 'test_helper'
+require 'nokogiri'
 
 class ParserTest < Minitest::Test
   def setup
-    @parser = FocusedCrawler::Classifier::Parser
+    @parser = FocusedCrawler::Parser
   end
 
   def test_that_it_should_remove_stopwords
@@ -26,7 +27,13 @@ class ParserTest < Minitest::Test
   def test_that_it_should_count_term_frequency_for_each_terms
     terms = %w(it is bad it is sad it is happy)
     count = @parser.count(terms)
-    expect = {"it"=>3.0, "is"=>3.0, "bad"=>1.0, "sad"=>1.0, "happy"=>1.0}
+    expect = {
+      tid('it')    => 3.0,
+      tid('is')    => 3.0,
+      tid('bad')   => 1.0,
+      tid('sad')   => 1.0,
+      tid('happy') => 1.0
+    }
     assert_equal expect, count
   end
 
@@ -41,5 +48,10 @@ class ParserTest < Minitest::Test
     doc = ['example']
     terms = @parser.stemming doc
     assert_instance_of Array, terms
+  end
+
+  def test_that_it_should_return_tid_hashed_term
+    tid = @parser.tid(%w(test hogehoge fugafugafuga).sample)
+    assert_equal 8, tid.size
   end
 end
