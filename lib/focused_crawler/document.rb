@@ -2,9 +2,10 @@ require 'matrix'
 
 module FocusedCrawler
   class Document
-    attr_reader :document
+    attr_reader :url, :document
 
-    def initialize(document)
+    def initialize(url, document)
+      @url = url
       @document = Nokogiri::HTML(document)
     end
 

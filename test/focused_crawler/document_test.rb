@@ -2,11 +2,17 @@ require 'test_helper'
 
 class DocumentTest < Minitest::Test
   def setup
-    @document = FocusedCrawler::Document.new(document)
+    url = 'http://example.com'
+    @document = FocusedCrawler::Document.new(url, document)
   end
 
   def test_that_it_should_set_instance_of_nokogiri_element
     assert_instance_of Nokogiri::HTML::Document, @document.document
+  end
+
+  def test_that_it_should_set_a_instance_variable_of_url
+    url = @document.instance_variable_get :@url
+    assert_equal 'http://example.com', url
   end
 
   def test_that_it_should_get_terms

@@ -3,9 +3,8 @@ require 'test_helper'
 class ClassifierTest < Minitest::Test
   def setup
     target = Minitest::Mock.new.expect :new, nil
-    FocusedCrawler::Classifier.stub_any_instance :run, nil do
-      @classifier = FocusedCrawler::Classifier.new(target, IO.pipe)
-    end
+    writer = Tempfile.new ['writer', '.out'], 'test'
+    @classifier = FocusedCrawler::Classifier.new(target, writer)
   end
 
   def test_that_it_should_return_float_value_distination_of_v1_to_v2
@@ -43,5 +42,31 @@ class ClassifierTest < Minitest::Test
     document = Minitest::Mock.new.expect :tf_idf, v2
     document = document.expect :index, nil
     assert_equal v1.dot(v2), @classifier.similarity(document)
+  end
+
+  def test_that_it_should_stop_when_queue_pushed_stop_symbol
+    document = Minitest::Mock.new.expect(:url, 'http://example.com')
+                             .expect(:links, ['http://example1.com'])
+    @classifier.stub :similarity, 0 do
+      @classifier.queue.push(document)
+      @classifier.queue.push :stop
+      assert_equal 0, @classifier.run
+    end
+  end
+
+  def test_that_it_should_write_dump_object_by_writer
+    document = Minitest::Mock.new.expect(:nil?, false)
+                             .expect(:==, false, [:stop])
+                             .expect(:url, 'http://example.com')
+                             .expect(:links, ['http://example1.com'])
+    @classifier.stub :similarity, 0 do
+      @classifier.queue.push :stop
+      @classifier.queue.push(document)
+      @classifier.run
+      writer = @classifier.instance_variable_get :@writer
+      object = JSON.parse File.read(writer.path)
+      expect = ['http://example.com', ['http://example1.com'], 0]
+      assert_equal expect, object
+    end
   end
 end
