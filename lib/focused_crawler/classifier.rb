@@ -1,24 +1,22 @@
-
 module FocusedCrawler
   class Classifier
-    def initialize(target, io)
+    attr_accessor :queue
+
+    def initialize(target, writer)
       @target = target
-      @reader, @writer = io
-      run
+      @writer = writer
+      @queue = []
     end
 
     def run
-      fork do
-        queue = [] << @reader.read
-        loop do
-          thread = Thread.start { loop { queue << @reader.read } }
-          doc = queue.pop
-          next if doc.nil?
-          document = Document.new(doc)
-          write @writer, [similarity(document), document.links]
-          thread.exit.join
-        end
+      loop do
+        doc = queue.pop
+        next if doc.nil?
+        break 0 if doc == :stop
+        write [doc.url, doc.links, similarity(doc)]
       end
+    ensure
+      @writer.close
     end
 
     def similarity(document)
@@ -33,6 +31,12 @@ module FocusedCrawler
       return -1 if v1.size != v2.size
       return v1.dot(v2) if opt[:normalized]
       v1.normalize.dot(v2.normalize)
+    end
+
+    private
+
+    def write(object)
+      @writer.write object.to_json
     end
   end
 end
