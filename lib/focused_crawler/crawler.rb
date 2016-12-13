@@ -3,39 +3,61 @@ require 'openssl'
 
 module FocusedCrawler
   class Crawler
-    include STATE
-
-    def run
-      return wait unless prepared?
-
-      busy
-      crawl
+    def initialize(classifier, reader, opt = {})
+      @classifier = classifier
+      @reader = reader
+      @queue = Queue.new
+      @opt = {
+        'User-Agent' => user_agent,
+        allow_redirections: :safe,
+        ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE
+      }.merge!(opt)
     end
 
-    def crawl
-      pages.each do |page|
-        next if page.crawled?
-        page.save
+    def run
+      listen
+      schedule
+    end
+
+    def listen
+      Thread.start do
+        loop do
+          job = @reader.gets
+          @queue.push job
+          break if job == :stop
+        end
+        @reader.close
       end
     end
 
-    def prepared?
-      !Dir.glob('links/*.json').empty?
+    def schedule
+      Thread.start do
+        loop do
+          job = @queue.pop
+          crawl job
+          break if job == :stop
+        end
+      end
     end
 
-    private
-
-    def pages
-      scored_links = Dir.glob('links/*').map do |path|
-        json_links = File.read path
-        File.delete path
-        JSON.parse json_links
-      end.flatten
-      sort(scored_links).map {|url| Page.new(url['url']) }
+    def crawl(url)
+      Thread.start(url) do |turl|
+        result = turl == :stop ? :stop : Document.new(turl, page(turl))
+        @classifier.queue.push result
+      end
     end
 
-    def sort(scored_links)
-      scored_links.uniq {|url| url['url'] }.sort_by {|url| url['score'] }
+    def page(url)
+      open url, @opt do |page|
+        doc = page.read
+        next doc if page.charset == /UTF(-)?8/i
+        doc.encode! 'UTF-8', page.charset, invalid: :replace, undef: :replace
+      end
+    end
+
+    def user_agent
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1)' \
+      'AppleWebKit/602.2.14 (KHTML, like Gecko) Version/10.0.1 Safari/602.2.14'
     end
   end
 end
