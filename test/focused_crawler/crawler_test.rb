@@ -1,35 +1,61 @@
-# require 'test_helper'
-# require 'json'
-#
-# class CrawlerTest < Minitest::Test
-#   def setup
-#     @crawler = FocusedCrawler::Crawler.new
-#   end
-#
-#   def teardown
-#     Dir.glob('pages/*').each do |path|
-#       File.delete path
-#     end
-#   end
-#
-#   def test_that_it_shoud_be_falsly_when_crawler_is_not_ready
-#     Dir.glob('links/*.json').each {|path| File.delete path }
-#     assert { false == @crawler.prepared? }
-#   end
-#
-#   def test_that_it_should_be_truly_when_crawler_is_ready
-#     in_test_links do
-#       assert { true == @crawler.prepared? }
-#     end
-#   end
-#
-#   def test_that_it_should_write_pages_at_links
-#     in_test_links do
-#       FocusedCrawler::Page.stub_any_instance(:page, 'test') do
-#         @crawler.crawl
-#         pages = Dir.glob('pages/*')
-#         assert { 3 == pages.size }
-#       end
-#     end
-#   end
-# end
+require 'test_helper'
+require 'json'
+
+class CrawlerTest < Minitest::Test
+  def setup
+    @classifier = FocusedCrawler::Classifier.new(:_, :_)
+    reader, @writer = IO.pipe
+    @crawler = FocusedCrawler::Crawler.new(@classifier, reader)
+  end
+
+  def test_that_it_should_push_url_send_through_reader
+    thread = @crawler.listen
+    @writer.puts 'http://example1.com'
+    @writer.puts 'http://example2.com'
+    queue = @crawler.instance_variable_get :@queue
+    sleep 0.05
+    assert_equal 2, queue.size
+    thread.exit
+  end
+
+  def test_that_it_should_get_url_from_queue
+    thread = @crawler.listen
+    @writer.puts 'http://example.com1'
+    @writer.puts 'http://example.com2'
+    queue = @crawler.instance_variable_get :@queue
+    assert_equal 'http://example.com1', queue.pop.chomp
+    assert_equal 'http://example.com2', queue.pop.chomp
+    thread.exit
+  end
+
+  def test_that_it_should_stop_running
+    @crawler.stub :crawl, '' do
+      th = @crawler.schedule
+      queue = @crawler.instance_variable_get :@queue
+      queue.push 'http://example.com'
+      queue.push :stop
+      th.join
+      assert_equal false, th.status
+    end
+  end
+
+  def test_that_it_should_set_a_document_to_classifier_queue
+    @crawler.stub :page, '' do
+      th = @crawler.schedule
+      queue = @crawler.instance_variable_get :@queue
+      queue.push 'http://example.com'
+      th.exit
+      assert_instance_of FocusedCrawler::Document, @classifier.queue.pop
+    end
+  end
+
+  def test_that_it_should_set_stop_symbol_to_classifier_queue
+    @crawler.stub :page, '' do
+      th = @crawler.schedule
+      queue = @crawler.instance_variable_get :@queue
+      queue.push :stop
+      th.join
+      assert_equal :stop, @classifier.queue.pop
+    end
+  end
+end

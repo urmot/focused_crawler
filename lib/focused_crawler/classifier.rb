@@ -5,18 +5,18 @@ module FocusedCrawler
     def initialize(target, writer)
       @target = target
       @writer = writer
-      @queue = []
+      @queue = Queue.new
     end
 
     def run
-      loop do
-        doc = queue.pop
-        next if doc.nil?
-        break 0 if doc == :stop
-        write [doc.url, doc.links, similarity(doc)]
+      Thread.start do
+        loop do
+          doc = queue.pop
+          break if doc == :stop
+          write [doc.url, doc.links, similarity(doc)]
+        end
+        @writer.close
       end
-    ensure
-      @writer.close
     end
 
     def similarity(document)
@@ -36,7 +36,7 @@ module FocusedCrawler
     private
 
     def write(object)
-      @writer.write object.to_json
+      @writer.puts object.to_json
     end
   end
 end

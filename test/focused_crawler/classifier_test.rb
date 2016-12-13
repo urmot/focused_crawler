@@ -3,7 +3,7 @@ require 'test_helper'
 class ClassifierTest < Minitest::Test
   def setup
     target = Minitest::Mock.new.expect :new, nil
-    writer = Tempfile.new ['writer', '.out'], 'test'
+    @reader, writer = IO.pipe
     @classifier = FocusedCrawler::Classifier.new(target, writer)
   end
 
@@ -45,26 +45,27 @@ class ClassifierTest < Minitest::Test
   end
 
   def test_that_it_should_stop_when_queue_pushed_stop_symbol
-    document = Minitest::Mock.new.expect(:url, 'http://example.com')
+    document = Minitest::Mock.new.expect(:==, false, [:stop])
+                             .expect(:url, 'http://example.com')
                              .expect(:links, ['http://example1.com'])
     @classifier.stub :similarity, 0 do
-      @classifier.queue.push(document)
+      th = @classifier.run
+      @classifier.queue.push document
       @classifier.queue.push :stop
-      assert_equal 0, @classifier.run
+      sleep 0.05
+      assert_equal false, th.status
     end
   end
 
   def test_that_it_should_write_dump_object_by_writer
-    document = Minitest::Mock.new.expect(:nil?, false)
-                             .expect(:==, false, [:stop])
+    document = Minitest::Mock.new.expect(:==, false, [:stop])
                              .expect(:url, 'http://example.com')
                              .expect(:links, ['http://example1.com'])
     @classifier.stub :similarity, 0 do
-      @classifier.queue.push :stop
       @classifier.queue.push(document)
+      @classifier.queue.push :stop
       @classifier.run
-      writer = @classifier.instance_variable_get :@writer
-      object = JSON.parse File.read(writer.path)
+      object = JSON.parse @reader.gets
       expect = ['http://example.com', ['http://example1.com'], 0]
       assert_equal expect, object
     end
