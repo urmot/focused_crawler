@@ -36,9 +36,7 @@ class TargetTest < Minitest::Test
   end
 
   def test_that_it_should_get_tf_idf_values
-    idf = Minitest::Mock.new
-    @count_terms.to_h.keys.sort!.each {|tid| idf = idf.expect :call, 10, [tid] }
-    FocusedCrawler::IDF.stub :[], idf do
+    @target.stub :idf, 10 do
       once = 1.0 / 12 * 10
       twice = 2.0 / 12 * 10
       values = Array.new(11, once)
@@ -48,13 +46,13 @@ class TargetTest < Minitest::Test
   end
 
   def test_that_it_should_unshift_zero_to_tf_idf_values
-    assert_equal 0, @target.tf_idf_values.first
+    @target.stub :idf, 10 do
+      assert_equal 0, @target.tf_idf_values.first
+    end
   end
 
   def test_that_it_should_tf_idf_for_the_argument_term
-    idf = Minitest::Mock.new
-    @count_terms.to_h.keys.sort!.each {|tid| idf = idf.expect :call, 10, [tid] }
-    FocusedCrawler::IDF.stub :[], idf do
+    @target.stub :idf, 10 do
       @target.stub :position, 8 do
         twice = 2.0 / 12 * 10
         assert_equal twice, @target.tf_idf(tid('it'))
@@ -63,39 +61,37 @@ class TargetTest < Minitest::Test
   end
 
   def test_that_it_should_return_position_of_tf_idf_values_for_tid
-    idf = Minitest::Mock.new
-    @count_terms.to_h.keys.sort!.each {|tid| idf = idf.expect :call, 10, [tid] }
-    FocusedCrawler::IDF.stub :[], idf do
+    @target.stub :idf, 10 do
       assert_equal 8, @target.position(tid('it'))
     end
   end
 
   def test_that_it_should_calculate_norm_of_the_tf_idf_vector
-    once = 1.0 / 12 * 10
-    twice = 2.0 / 12 * 10
-    values = Array.new(11, once)
-    values[7] = twice
-    norm = Vector.elements(values, false).norm
-    idf = Minitest::Mock.new
-    @count_terms.to_h.keys.sort!.each {|tid| idf = idf.expect :call, 10, [tid] }
-    FocusedCrawler::IDF.stub :[], idf do
+    @target.stub :idf, 10 do
+      once = 1.0 / 12 * 10
+      twice = 2.0 / 12 * 10
+      values = Array.new(11, once)
+      values[7] = twice
+      norm = Vector.elements(values, false).norm
       assert_equal norm, @target.norm
     end
   end
 
   def test_that_it_should_adjust_a_vector_for_other_vector
-    assert_instance_of Vector, @target.adjust([0])
+    @target.stub :idf, 10 do
+      assert_instance_of Vector, @target.adjust([0])
+    end
   end
 
   def test_that_it_should_adjust_dimension_for_other_vector
-    other_vector = [tid('it'), tid('should'), tid('test')]
-    assert_equal 3, @target.adjust(other_vector).size
+    @target.stub :idf, 10 do
+      other_vector = [tid('it'), tid('should'), tid('test')]
+      assert_equal 3, @target.adjust(other_vector).size
+    end
   end
 
   def test_that_it_should_nomalize_the_adjust_vector
-    idf = Minitest::Mock.new
-    @count_terms.to_h.keys.sort!.each {|tid| idf = idf.expect :call, 10, [tid] }
-    FocusedCrawler::IDF.stub :[], idf do
+    @target.stub :idf, 10 do
       other_vector = [tid('it'), tid('should'), tid('test')]
       vector = Vector[2.0 / 12 * 10, 1.0 / 12 * 10, 1.0 / 12 * 10] / @target.norm
       assert_equal vector, @target.adjust(other_vector)

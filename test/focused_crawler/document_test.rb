@@ -39,14 +39,13 @@ class DocumentTest < Minitest::Test
   end
 
   def test_that_it_should_return_vector_of_tf_idf_for_terms_in_document
-    assert_instance_of Vector, @document.tf_idf
+    @document.stub :idf, 10 do
+      assert_instance_of Vector, @document.tf_idf
+    end
   end
 
   def test_that_it_should_return_vector_into_tf_idf_values
-    idf = Minitest::Mock.new.expect(:call, 10, [tid('test')])
-                        .expect(:call, 10, [tid('document')])
-                        .expect(:call, 10, [tid('will')])
-    FocusedCrawler::IDF.stub :[], idf do
+    @document.stub :idf, 10 do
       tf_idf = Vector[2.0 * 10 / 5, 2.0 * 10 / 5, 1.0 * 10 / 5]
       assert_equal tf_idf, @document.tf_idf
     end
@@ -60,10 +59,10 @@ class DocumentTest < Minitest::Test
     <<-EOS
     <html>
     <body>
-    This is a test document.
-    It will use document test.
-    <a href='http://example1.com' />
-    <a href='http://example2.com' />
+      This is a test document.
+      It will use document test.
+      <a href='http://example1.com' />
+      <a href='http://example2.com' />
     </body>
     </html>
     EOS

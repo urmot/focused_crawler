@@ -24,8 +24,12 @@ module FocusedCrawler
 
     def tf_idf
       Vector.elements(count_terms.map {|tid, count|
-        count / size * IDF[tid]
+        count / size * idf(tid)
       }, false)
+    end
+
+    def idf(tid)
+      IDF[tid]
     end
 
     def tf_idf_index

@@ -20,8 +20,12 @@ module FocusedCrawler
 
     def tf_idf_values
       @tf_idf_values ||= count_terms.map do |tid, count|
-        count / terms.length * IDF[tid]
+        count / terms.length * idf(tid)
       end.unshift(0)
+    end
+
+    def idf(tid)
+      IDF[tid]
     end
 
     def tf_idf(tid)
