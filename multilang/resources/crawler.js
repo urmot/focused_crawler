@@ -18,18 +18,23 @@ class CrawlerBolt extends BasicBolt {
 
     if (tup.values[2] == null) {
       self.emit({tuple: ['poll'], stream: 'requestStream', anchorTupleId: tup.id}, (taskIds) => {})
+      done();
     } else if (self.threads < self.maxThreads) {
-      self.crawl(self, tup)
+      self.crawl(self, tup, done);
     } else {
-      self.queue.push(tup)
+      self.queue.push([tup, done]);
     }
   }
 
-  crawl(self, tup) {
+  crawl(self, tup, done) {
     self.threads++
     var values = tup.values
     var url = values[2]
-    let option = { url: url, headers: self.headers }
+    let option = {
+      url: url,
+      headers: self.headers,
+      proxy: 'http://192.168.128.40:5432',
+    }
 
     request(option, (err, res, body) => {
       if (!err && res.statusCode == 200) {
@@ -37,12 +42,17 @@ class CrawlerBolt extends BasicBolt {
         self.emit({tuple: values, stream: 'documentStream', anchorTupleId: tup.id}, (taskIds) => {})
       } else {
         self.emit({tuple: values, stream: 'updateStream', anchorTupleId: tup.id}, (taskIds) => {
-          self.log(`Error:${url} is missing\n${err}`)
+          // self.log(`Error:${url} is missing\n${err}`)
         })
       }
       self.threads--
-      if (self.queue.length > 0) self.crawl(self, self.queue.shift())
-      else self.emit({tuple: ['poll'], stream: 'requestStream', anchorTupleId: tup.id}, (taskIds) => {})
+      if (self.queue.length > 0) {
+        let [t, d] = self.queue.shift()
+        self.crawl(self, t, d)
+      } else {
+        self.emit({tuple: ['poll'], stream: 'requestStream', anchorTupleId: tup.id}, (taskIds) => {})
+      }
+      done();
     })
   }
 }

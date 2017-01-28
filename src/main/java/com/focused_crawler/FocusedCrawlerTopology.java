@@ -19,9 +19,11 @@ package com.focused_crawler;
 
 import com.focused_crawler.spout.SeedSpout;
 import com.focused_crawler.bolt.PriorityControllerBolt;
+import com.focused_crawler.bolt.StatefulPriorityControllerBolt;
 import com.focused_crawler.bolt.DocumentParserBolt;
 import com.focused_crawler.bolt.StatefulDocumentProbBolt;
 import com.focused_crawler.bolt.LinkParserBolt;
+import com.focused_crawler.bolt.StatefulLinkParserBolt;
 import com.focused_crawler.bolt.StemmerBolt;
 import com.focused_crawler.bolt.DocumentProbBolt;
 import com.focused_crawler.bolt.WordProbBolt;
@@ -39,8 +41,11 @@ import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.IRichBolt;
+import org.apache.storm.topology.BasicOutputCollector;
+import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
+import org.apache.storm.tuple.Tuple;
 import org.apache.storm.utils.Utils;
 import org.apache.storm.jdbc.common.Column;
 import org.apache.storm.jdbc.common.ConnectionProvider;
@@ -97,6 +102,19 @@ public class FocusedCrawlerTopology {
     }
   }
 
+  public static class PrinterBolt extends BaseBasicBolt {
+    @Override
+    public void execute(Tuple tuple, BasicOutputCollector collector) {
+      System.out.println(tuple);
+      collector.emit(tuple.getValues());
+    }
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer ofd) {
+      ofd.declare(new Fields("value"));
+    }
+  }
+
   public static void main(String[] args) throws Exception {
 
     TopologyBuilder builder = new TopologyBuilder();
@@ -119,31 +137,34 @@ public class FocusedCrawlerTopology {
       .withQueryTimeoutSecs(30);
 
     builder.setSpout("spout", new SeedSpout(), 1);
-    builder.setBolt("priorityController", new PriorityControllerBolt(), 1)
-           .shuffleGrouping("spout", "requestStream")
-           .shuffleGrouping("crawler", "requestStream")
-           .shuffleGrouping("linkParser", "linkStream");
+    builder.setBolt("priorityController", new StatefulPriorityControllerBolt(), 1)
+           .shuffleGrouping("spout", "requestStream");
+            // .shuffleGrouping("crawler", "requestStream");
+     //        .shuffleGrouping("linkParser", "linkStream");
+    builder.setBolt("print", new PrinterBolt(), 1)
+           .shuffleGrouping("crawler", "documentStream")
+           .shuffleGrouping("priorityController", "linkStream");
     builder.setBolt("crawler", new CrawlerBolt(), 1)
            .fieldsGrouping("priorityController", "linkStream", new Fields("sid"));
-    builder.setBolt("documentParser", new DocumentParserBolt(), 1)
-          //  .setNumTasks(16)
-           .localOrShuffleGrouping("crawler", "documentStream");
-    builder.setBolt("linkParser", new LinkParserBolt(), 1)
-           .fieldsGrouping("documentParser", "linkStream", new Fields("src"))
-           .fieldsGrouping("documentProb", "updateStream", new Fields("oid"));
-    builder.setBolt("stemmer", new StemmerBolt(), 1)
-           .shuffleGrouping("documentParser", "wordStream");
-    builder.setBolt("wordProb", new WordProbBolt(args[0]), 1)
-           .shuffleGrouping("stemmer", "wordStream");
-    builder.setBolt("documentProb", new DocumentProbBolt(), 1)
-           .fieldsGrouping("stemmer", "probStream", new Fields("oid"))
-           .fieldsGrouping("wordProb", "probStream", new Fields("oid"))
-           .fieldsGrouping("documentParser", "docSizeStream", new Fields("oid"));
-    builder.setBolt("updateCrawls", updateCrawlBolt, 1)
-           .shuffleGrouping("documentProb", "updateStream");
-          //  .shuffleGrouping("crawler", "updateStream");
-    builder.setBolt("benchmark", new BenchMarkBolt(), 1)
-           .shuffleGrouping("documentProb", "updateStream");
+    // builder.setBolt("documentParser", new DocumentParserBolt(), 8)
+    //        .setNumTasks(16)
+    //        .localOrShuffleGrouping("crawler", "documentStream");
+    // builder.setBolt("linkParser", new StatefulLinkParserBolt(), 8)
+    //        .fieldsGrouping("documentParser", "linkStream", new Fields("src"))
+    //        .fieldsGrouping("documentProb", "updateStream", new Fields("oid"));
+    // builder.setBolt("stemmer", new StemmerBolt(), 8)
+    //        .shuffleGrouping("documentParser", "wordStream");
+    // builder.setBolt("wordProb", new WordProbBolt(args[0]), 8)
+    //        .shuffleGrouping("stemmer", "wordStream");
+    // builder.setBolt("documentProb", new StatefulDocumentProbBolt(), 8)
+    //        .fieldsGrouping("stemmer", "probStream", new Fields("oid"))
+    //        .fieldsGrouping("wordProb", "probStream", new Fields("oid"))
+    //        .fieldsGrouping("documentParser", "docSizeStream", new Fields("oid"));
+    // builder.setBolt("updateCrawls", updateCrawlBolt, 8)
+    //        .shuffleGrouping("documentProb", "updateStream");
+    //       //  .shuffleGrouping("crawler", "updateStream");
+    // builder.setBolt("benchmark", new BenchMarkBolt(), 1)
+    //        .shuffleGrouping("documentProb", "updateStream");
     // builder.setBolt("writeFile", new WriteFileBolt(), 1)
     //        .setNumTasks(8)
     //        .fieldsGrouping("crawler", "documentStream", new Fields("sid"));
@@ -158,7 +179,7 @@ public class FocusedCrawlerTopology {
       conf.setMaxTaskParallelism(3);
        LocalCluster cluster = new LocalCluster();
        cluster.submitTopology("focused-crawler", conf, builder.createTopology());
-       Thread.sleep(100000);
+       Thread.sleep(30000);
        cluster.shutdown();
     }
   }

@@ -6,7 +6,6 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseStatefulBolt;
-import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
@@ -19,58 +18,57 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class StatefulDocumentProbBolt extends BaseStatefulBolt<KeyValueState<Integer, List>> {
+public class StatefulDocumentProbBolt extends BaseStatefulBolt<KeyValueState<String, Map>> {
   private static final Logger LOG = LoggerFactory.getLogger(DocumentProbBolt.class);
   private OutputCollector collector;
-  /* metadata formatted by  { prob, sid, size, url }*/
-  KeyValueState<Integer, List> metaStore;
-  Map<Integer, Integer> counter = new HashMap<Integer, Integer>();
-
-  @Override
-  public void initState(KeyValueState<Integer, List> state) {
-    metaStore = state;
-    System.out.println("initState");
-  }
+  /* metadata formatted by  { oid, sid, size, url, prob, count }*/
+  KeyValueState<String, Map> kvState;
+  Map<Integer, List> metaStore;
 
   @Override
   public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
     this.collector = collector;
-    System.out.println("prepare");
+  }
+
+  @Override
+  public void initState(KeyValueState<String, Map> state) {
+    kvState = state;
+    metaStore = kvState.get("metaStore", new HashMap<Integer, List>());
   }
 
   @Override
   public void execute(Tuple tuple) {
-    System.out.println("execute");
     switch (tuple.getSourceStreamId()) {
     case "docSizeStream":
       Integer oid = tuple.getInteger(0);
       List meta = tuple.getValues();
-      meta.set(0, 0d);
-      counter.put(oid, 0);
+      meta.add(4, 0d);
+      meta.add(5, 0);
       metaStore.put(oid, meta);
-      collector.ack(tuple);
+      kvState.put("metaStore", metaStore);
       break;
     case "probStream":
       documentProb(tuple);
-      collector.ack(tuple);
       break;
     }
+    collector.ack(tuple);
   }
 
   public void documentProb(Tuple tuple) {
     Integer oid = tuple.getInteger(0);
-    List meta = metaStore.get(oid);
-    Double prob = (Double) meta.get(0);
+    List meta = (List) metaStore.get(oid);
     Integer size = (Integer) meta.get(2);
-    Integer count = counter.get(oid);
+    Double prob = (Double) meta.get(4);
+    Integer count = (Integer) meta.get(5);
     prob += tuple.getDouble(1);
     count++;
     if (size.equals(count)) {
       collector.emit("updateStream", tuple, new Values(oid, meta.get(1), meta.get(3), prob));
     } else {
-      meta.set(0, prob);
-      counter.put(oid, count);
+      meta.set(4, prob);
+      meta.set(5, count);
       metaStore.put(oid, meta);
+      kvState.put("metaStore", metaStore);
     }
   }
 
