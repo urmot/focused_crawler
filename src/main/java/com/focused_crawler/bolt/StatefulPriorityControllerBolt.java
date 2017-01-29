@@ -62,31 +62,31 @@ public class StatefulPriorityControllerBolt extends BaseStatefulBolt<KeyValueSta
 
   @Override
   public void execute(Tuple tuple) {
-    switch (tuple.getSourceStreamId()) {
-    case "requestStream":
+    switch (tuple.getSourceComponent()) {
+    case "requestSpout":
       List link = queue.poll();
-      if (link == null) {
-        collector.emit("linkStream", tuple, new Values(null, null, null, null));
-      } else {
+      if (link != null) {
         collector.emit("linkStream", tuple, link);
         Integer sid = (Integer) link.get(1);
         Integer serverload = serverloads.getOrDefault(sid, 0);
         serverloads.put(sid, serverload++);
         kvState.put("serverloads", serverloads);
       }
-      collector.ack(tuple);
       break;
-    case "linkStream":
-      Integer oid = tuple.getInteger(0);
+    case "kafkaSpout":
+      String[] values = tuple.getString(0).split("\\|");
+      Integer oid = Integer.parseInt(values[0]);
+      Integer sid = Integer.parseInt(values[1]);
+      String  url = values[2];
+      Double relevance = Double.parseDouble(values[3]);
       if (!crawled.contains(oid)) {
         crawled.add(oid);
-        queue.add(tuple.getValues());
+        queue.add(new Values(oid, sid, url, relevance));
         kvState.put("crawled", queue);
       }
-      kvState.put("queue", queue);
-      collector.ack(tuple);
       break;
     }
+    collector.ack(tuple);
   }
 
   @Override

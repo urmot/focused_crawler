@@ -18,14 +18,14 @@
 package com.focused_crawler;
 
 import com.focused_crawler.spout.SeedSpout;
-import com.focused_crawler.bolt.PriorityControllerBolt;
-import com.focused_crawler.bolt.CrawlerBolt;
 import com.focused_crawler.bolt.StatefulPriorityControllerBolt;
-import com.focused_crawler.bolt.StatefulDocumentProbBolt;
+import com.focused_crawler.bolt.CrawlerBolt;
+import com.focused_crawler.bolt.DocumentParserBolt;
 import com.focused_crawler.bolt.LinkParserBolt;
 import com.focused_crawler.bolt.StemmerBolt;
-import com.focused_crawler.bolt.DocumentProbBolt;
 import com.focused_crawler.bolt.WordProbBolt;
+import com.focused_crawler.bolt.StatefulDocumentProbBolt;
+import com.focused_crawler.bolt.MysqlInsertBolt;
 import com.focused_crawler.bolt.BenchMarkBolt;
 import com.focused_crawler.bolt.PrinterBolt;
 import com.focused_crawler.utils.Kafka;
@@ -55,6 +55,14 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.UUID;
+
+import org.apache.storm.kafka.ZkHosts;
+import org.apache.storm.kafka.StringScheme;
+import org.apache.storm.kafka.BrokerHosts;
+import org.apache.storm.kafka.SpoutConfig;
+import org.apache.storm.kafka.KafkaSpout;
+import org.apache.storm.spout.SchemeAsMultiScheme;
 
 /**
  * This topology demonstrates Storm's stream groupings and multilang capabilities.
@@ -78,42 +86,51 @@ public class FocusedCrawlerTopology {
 
   public static void main(String[] args) throws Exception {
     TopologyBuilder builder = new TopologyBuilder();
-    Kafka kafka = new Kafka("localhost:9092", "links");
+    Kafka kafka = new Kafka("kafka", "links");
+    MysqlInsertBolt mysqlInsertBolt = new MysqlInsertBolt();
 
-    builder.setSpout("spout", kafka.getSpout(), 1);
-    builder.setBolt("priorityController", new PriorityControllerBolt(), 1)
-           .shuffleGrouping("spout");
+    builder.setSpout("kafkaSpout", kafka.getSpout(), 1);
+    builder.setSpout("requestSpout", new SeedSpout(), 1);
+    builder.setBolt("priorityController", new StatefulPriorityControllerBolt(), 1)
+           .shuffleGrouping("kafkaSpout")
+           .shuffleGrouping("requestSpout", "requestStream");
     builder.setBolt("crawler", new CrawlerBolt(), 1)
            .fieldsGrouping("priorityController", "linkStream", new Fields("sid"));
-    // builder.setBolt("documentParser", new DocumentParserBolt(), 1)
+    builder.setBolt("documentParser", new DocumentParserBolt(), 1)
     //       //  .setNumTasks(16)
-    //        .localOrShuffleGrouping("crawler", "documentStream");
-    // builder.setBolt("linkParser", new LinkParserBolt(), 1)
-    //        .fieldsGrouping("documentParser", "linkStream", new Fields("src"));
-    //       //  .fieldsGrouping("documentProb", "updateStream", new Fields("oid"));
-    // builder.setBolt("stemmer", new StemmerBolt(), 1)
-    //        .shuffleGrouping("documentParser", "wordStream");
-    // builder.setBolt("wordProb", new WordProbBolt(args[0]), 1)
-    //        .shuffleGrouping("stemmer", "wordStream");
-    // builder.setBolt("documentProb", new StatefulDocumentProbBolt(), 1)
-    //        .fieldsGrouping("stemmer", "probStream", new Fields("oid"))
-    //        .fieldsGrouping("wordProb", "probStream", new Fields("oid"))
-    //        .fieldsGrouping("documentParser", "docSizeStream", new Fields("oid"));
-    // builder.setBolt("updateCrawls", updateCrawlBolt, 1)
-    //        .shuffleGrouping("documentProb", "updateStream");
+           .localOrShuffleGrouping("crawler", "documentStream");
+    builder.setBolt("linkParser", new LinkParserBolt(), 1)
+           .shuffleGrouping("documentParser", "linkStream");
+    builder.setBolt("stemmer", new StemmerBolt(), 1)
+           .shuffleGrouping("documentParser", "wordStream");
+    builder.setBolt("wordProb", new WordProbBolt(args[0]), 1)
+           .shuffleGrouping("stemmer", "wordStream");
+    builder.setBolt("documentProb", new StatefulDocumentProbBolt(), 1)
+           .fieldsGrouping("stemmer", "probStream", new Fields("oid"))
+           .fieldsGrouping("wordProb", "probStream", new Fields("oid"))
+           .fieldsGrouping("linkParser", "linkStream", new Fields("src"))
+           .fieldsGrouping("documentParser", "docSizeStream", new Fields("oid"));
+    builder.setBolt("kafkaBolt", kafka.getBolt(), 1)
+           .shuffleGrouping("documentProb", "linkStream");
+    builder.setBolt("mysqlBolt", mysqlInsertBolt.getBolt(), 1)
+           .shuffleGrouping("documentProb", "updateStream");
           //  .shuffleGrouping("crawler", "updateStream");
     // builder.setBolt("benchmark", new BenchMarkBolt(), 1)
     //        .shuffleGrouping("documentProb", "updateStream");
     builder.setBolt("print", new PrinterBolt(), 1)
-           .shuffleGrouping("priorityController", "linkStream")
-           .shuffleGrouping("crawler", "documentStream");
-          //  .shuffleGrouping("documentParser", "linkStream")
-          // .shuffleGrouping("documentParser", "docSizeStream")
+          //  .shuffleGrouping("requestSpout")
+          //  .shuffleGrouping("kafkaSpout")
+          //  .shuffleGrouping("priorityController", "linkStream")
+          //  .shuffleGrouping("crawler", "documentStream");
+          // .shuffleGrouping("documentParser", "wordStream")
+          // .shuffleGrouping("documentParser", "linkStream")
+          // .shuffleGrouping("documentParser", "docSizeStream");
+          // .shuffleGrouping("linkParser", "linkStream")
           // .shuffleGrouping("stemmer", "wordStream")
           // .shuffleGrouping("stemmer", "probStream")
-          // .shuffleGrouping("wordProb", "probStream")
-          // .shuffleGrouping("documentParser", "docSizeStream")
-          // .shuffleGrouping("documentProb", "updateStream");
+          // .shuffleGrouping("wordProb", "probStream");
+          .shuffleGrouping("documentProb", "updateStream");
+          // .shuffleGrouping("documentProb", "linkStream");
     // builder.setBolt("writeFile", new WriteFileBolt(), 1)
     //        .setNumTasks(8)
     //        .fieldsGrouping("crawler", "documentStream", new Fields("sid"));
