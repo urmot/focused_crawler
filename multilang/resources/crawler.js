@@ -16,13 +16,15 @@ class CrawlerBolt extends BasicBolt {
   process(tup, done) {
     var self = this
 
-    if (tup.values[2] == null) {
+    if (tup.values[2] == null && self.queue.length == 0) {
       self.emit({tuple: ['poll'], stream: 'requestStream', anchorTupleId: tup.id}, (taskIds) => {})
-      done();
+      done()
     } else if (self.threads < self.maxThreads) {
-      self.crawl(self, tup, done);
+      self.crawl(self, tup, done)
+    } else if (tup.values[2] != null){
+      self.queue.push([tup, done])
     } else {
-      self.queue.push([tup, done]);
+      done();
     }
   }
 
@@ -33,7 +35,7 @@ class CrawlerBolt extends BasicBolt {
     let option = {
       url: url,
       headers: self.headers,
-      proxy: 'http://192.168.128.40:5432',
+      // proxy: 'http://192.168.128.40:5432'
     }
 
     request(option, (err, res, body) => {
@@ -42,7 +44,7 @@ class CrawlerBolt extends BasicBolt {
         self.emit({tuple: values, stream: 'documentStream', anchorTupleId: tup.id}, (taskIds) => {})
       } else {
         self.emit({tuple: values, stream: 'updateStream', anchorTupleId: tup.id}, (taskIds) => {
-          // self.log(`Error:${url} is missing\n${err}`)
+ //         self.log(`Error:${url} is missing\n${err}`)
         })
       }
       self.threads--

@@ -26,10 +26,10 @@ public class SeedSpout extends BaseRichSpout {
 
   @Override
   public void nextTuple() {
-    if (count < 10) {
+    if (count < 1) {
       _collector.emit("requestStream", new Values("poll"));
-      count++;
       Utils.sleep(100);
+      count++;
     }
   }
 

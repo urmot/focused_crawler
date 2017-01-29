@@ -32,10 +32,12 @@ public class DocumentParserBolt extends BaseBasicBolt {
       collector.emit("linkStream", new Values(oid, e.attr("href")));
 
     List<String> words = new ArrayList<String>(Arrays.asList(document.text().split("\\W")));
-    collector.emit("docSizeStream", new Values(oid, sid, words.size(), url));
-    words.stream().forEach(word -> {
-      collector.emit("wordStream", new Values(oid, word));
-    });
+    if (words.size() > 100) {
+      collector.emit("docSizeStream", new Values(oid, sid, words.size(), url));
+      words.stream().forEach(word -> {
+        collector.emit("wordStream", new Values(oid, word));
+      });
+    }
   }
 
   @Override

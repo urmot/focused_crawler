@@ -22,6 +22,7 @@ import com.focused_crawler.spout.SeedSpout;
 import com.focused_crawler.bolt.StatefulPriorityControllerBolt;
 import com.focused_crawler.bolt.StatefulDocumentProbBolt;
 import com.focused_crawler.bolt.StatefulLinkParserBolt;
+import com.focused_crawler.bolt.CrawlerBolt;
 
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
@@ -34,6 +35,7 @@ import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.base.BaseBasicBolt;
+import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseStatefulBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
@@ -121,7 +123,6 @@ public class StatefulTopology {
     @Override
     public void execute(Tuple tuple, BasicOutputCollector collector) {
       System.out.println(tuple);
-      LOG.debug("Got tuple {}", tuple);
       collector.emit(tuple.getValues());
     }
 
@@ -132,17 +133,28 @@ public class StatefulTopology {
 
   }
 
-  public static class SampleBolt extends BaseBasicBolt {
+  public static class SampleBolt extends BaseRichBolt {
     private Random rand;
+    private OutputCollector collector;
 
     @Override
-    public void execute(Tuple tuple, BasicOutputCollector collector) {
-      collector.emit("requestStream", new Values("poll"));
+    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+      this.collector = collector;
+    }
+
+    @Override
+    public void execute(Tuple tuple) {
+      collector.emit("docSizeStream", tuple, new Values(0, 0, 30, "http://example.com"));
+      for (int i = 0; i < 30; i++) {
+        Utils.sleep(100);
+        collector.emit("probStream", tuple, new Values(0, 0.01));
+      }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer ofd) {
-      ofd.declareStream("requestStream", new Fields("request"));
+      ofd.declareStream("probStream", new Fields("oid", "prob"));
+      ofd.declareStream("docSizeStream", new Fields("oid", "sid", "size", "url"));
     }
 
   }
@@ -152,11 +164,13 @@ public class StatefulTopology {
     builder.setSpout("spout", new SeedSpout());
     builder.setBolt("sample", new SampleBolt(), 1)
            .shuffleGrouping("spout", "requestStream");
-    builder.setBolt("testee", new StatefulPriorityControllerBolt(), 1)
-           .shuffleGrouping("spout", "requestStream")
-           .shuffleGrouping("sample", "requestStream");
+    builder.setBolt("testee", new StatefulDocumentProbBolt(), 1)
+           .shuffleGrouping("sample", "probStream")
+           .shuffleGrouping("sample", "docSizeStream");
     builder.setBolt("printer", new PrinterBolt(), 2)
-           .shuffleGrouping("testee", "linkStream");
+           .shuffleGrouping("sample", "docSizeStream")
+           .shuffleGrouping("sample", "probStream")
+           .shuffleGrouping("testee", "updateStream");
     Config conf = new Config();
     conf.setDebug(false);
 
