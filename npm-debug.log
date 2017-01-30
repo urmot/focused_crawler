@@ -1,0 +1,90 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/Users/mura/.nodebrew/node/v6.9.1/bin/node',
+1 verbose cli   '/Users/mura/.nodebrew/current/bin/npm',
+1 verbose cli   'install',
+1 verbose cli   '-g',
+1 verbose cli   'git://stash/scm/ss/generator-lambda.git' ]
+2 info using npm@3.10.8
+3 info using node@v6.9.1
+4 silly loadCurrentTree Starting
+5 silly install loadCurrentTree
+6 silly install readGlobalPackageData
+7 silly fetchPackageMetaData git://stash/scm/ss/generator-lambda.git
+8 silly fetchOtherPackageData git://stash/scm/ss/generator-lambda.git
+9 silly cache add args [ 'git://stash/scm/ss/generator-lambda.git', null ]
+10 verbose cache add spec git://stash/scm/ss/generator-lambda.git
+11 silly cache add parsed spec Result {
+11 silly cache add   raw: 'git://stash/scm/ss/generator-lambda.git',
+11 silly cache add   scope: null,
+11 silly cache add   escapedName: null,
+11 silly cache add   name: null,
+11 silly cache add   rawSpec: 'git://stash/scm/ss/generator-lambda.git',
+11 silly cache add   spec: 'git://stash/scm/ss/generator-lambda.git',
+11 silly cache add   type: 'git' }
+12 verbose addRemoteGit caching git://stash/scm/ss/generator-lambda.git
+13 silly tryClone cloning git://stash/scm/ss/generator-lambda.git via git://stash/scm/ss/generator-lambda.git
+14 verbose tryClone git-stash-scm-ss-generator-lambda-git-737543bb not in flight; caching
+15 verbose correctMkdir /Users/mura/.npm/_git-remotes correctMkdir not in flight; initializing
+16 info git [ 'clone',
+16 info git   '--template=/Users/mura/.npm/_git-remotes/_templates',
+16 info git   '--mirror',
+16 info git   'git://stash/scm/ss/generator-lambda.git',
+16 info git   '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb' ]
+17 error git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb: Cloning into bare repository '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb'...
+17 error git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb: fatal: Unable to look up stash (port 9418) (nodename nor servname provided, or not known)
+18 silly fetchPackageMetaData Error: Command failed: git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb
+18 silly fetchPackageMetaData Cloning into bare repository '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb'...
+18 silly fetchPackageMetaData fatal: Unable to look up stash (port 9418) (nodename nor servname provided, or not known)
+18 silly fetchPackageMetaData
+18 silly fetchPackageMetaData     at ChildProcess.exithandler (child_process.js:206:12)
+18 silly fetchPackageMetaData     at emitTwo (events.js:106:13)
+18 silly fetchPackageMetaData     at ChildProcess.emit (events.js:191:7)
+18 silly fetchPackageMetaData     at maybeClose (internal/child_process.js:877:16)
+18 silly fetchPackageMetaData     at Socket.<anonymous> (internal/child_process.js:334:11)
+18 silly fetchPackageMetaData     at emitOne (events.js:96:13)
+18 silly fetchPackageMetaData     at Socket.emit (events.js:188:7)
+18 silly fetchPackageMetaData     at Pipe._handle.close [as _onclose] (net.js:498:12)
+18 silly fetchPackageMetaData  error for git://stash/scm/ss/generator-lambda.git { Error: Command failed: git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb
+18 silly fetchPackageMetaData Cloning into bare repository '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb'...
+18 silly fetchPackageMetaData fatal: Unable to look up stash (port 9418) (nodename nor servname provided, or not known)
+18 silly fetchPackageMetaData
+18 silly fetchPackageMetaData     at ChildProcess.exithandler (child_process.js:206:12)
+18 silly fetchPackageMetaData     at emitTwo (events.js:106:13)
+18 silly fetchPackageMetaData     at ChildProcess.emit (events.js:191:7)
+18 silly fetchPackageMetaData     at maybeClose (internal/child_process.js:877:16)
+18 silly fetchPackageMetaData     at Socket.<anonymous> (internal/child_process.js:334:11)
+18 silly fetchPackageMetaData     at emitOne (events.js:96:13)
+18 silly fetchPackageMetaData     at Socket.emit (events.js:188:7)
+18 silly fetchPackageMetaData     at Pipe._handle.close [as _onclose] (net.js:498:12)
+18 silly fetchPackageMetaData   killed: false,
+18 silly fetchPackageMetaData   code: 128,
+18 silly fetchPackageMetaData   signal: null,
+18 silly fetchPackageMetaData   cmd: 'git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb' }
+19 silly rollbackFailedOptional Starting
+20 silly rollbackFailedOptional Finishing
+21 silly runTopLevelLifecycles Finishing
+22 silly install printInstalled
+23 verbose stack Error: Command failed: git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb
+23 verbose stack Cloning into bare repository '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb'...
+23 verbose stack fatal: Unable to look up stash (port 9418) (nodename nor servname provided, or not known)
+23 verbose stack
+23 verbose stack     at ChildProcess.exithandler (child_process.js:206:12)
+23 verbose stack     at emitTwo (events.js:106:13)
+23 verbose stack     at ChildProcess.emit (events.js:191:7)
+23 verbose stack     at maybeClose (internal/child_process.js:877:16)
+23 verbose stack     at Socket.<anonymous> (internal/child_process.js:334:11)
+23 verbose stack     at emitOne (events.js:96:13)
+23 verbose stack     at Socket.emit (events.js:188:7)
+23 verbose stack     at Pipe._handle.close [as _onclose] (net.js:498:12)
+24 verbose cwd /Users/mura/Documents/playground/storm/focused_crawler
+25 error Darwin 16.3.0
+26 error argv "/Users/mura/.nodebrew/node/v6.9.1/bin/node" "/Users/mura/.nodebrew/current/bin/npm" "install" "-g" "git://stash/scm/ss/generator-lambda.git"
+27 error node v6.9.1
+28 error npm  v3.10.8
+29 error code 128
+30 error Command failed: git clone --template=/Users/mura/.npm/_git-remotes/_templates --mirror git://stash/scm/ss/generator-lambda.git /Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb
+30 error Cloning into bare repository '/Users/mura/.npm/_git-remotes/git-stash-scm-ss-generator-lambda-git-737543bb'...
+30 error fatal: Unable to look up stash (port 9418) (nodename nor servname provided, or not known)
+31 error If you need help, you may report this error at:
+31 error     <https://github.com/npm/npm/issues>
+32 verbose exit [ 1, true ]

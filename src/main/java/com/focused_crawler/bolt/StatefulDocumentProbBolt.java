@@ -73,7 +73,6 @@ public class StatefulDocumentProbBolt extends BaseStatefulBolt<KeyValueState<Str
     prob += tuple.getDouble(1);
     count++;
     if (size.equals(count)) {
-      System.out.println("count/size: " + count + "/" + size);
       collector.emit("updateStream", tuple, new Values(oid, meta.get(1), meta.get(3), prob));
       List links = linkStore.get(oid);
       if (links != null)

@@ -86,7 +86,7 @@ public class FocusedCrawlerTopology {
 
   public static void main(String[] args) throws Exception {
     TopologyBuilder builder = new TopologyBuilder();
-    Kafka kafka = new Kafka("kafka", "links");
+    Kafka kafka = new Kafka("kafka", "test");
     MysqlInsertBolt mysqlInsertBolt = new MysqlInsertBolt();
 
     builder.setSpout("kafkaSpout", kafka.getSpout(), 1);
@@ -115,10 +115,10 @@ public class FocusedCrawlerTopology {
     builder.setBolt("mysqlBolt", mysqlInsertBolt.getBolt(), 1)
            .shuffleGrouping("documentProb", "updateStream");
           //  .shuffleGrouping("crawler", "updateStream");
-    // builder.setBolt("benchmark", new BenchMarkBolt(), 1)
-    //        .shuffleGrouping("documentProb", "updateStream");
+    builder.setBolt("benchmark", new BenchMarkBolt(), 1)
+           .shuffleGrouping("documentProb", "updateStream");
     builder.setBolt("print", new PrinterBolt(), 1)
-          //  .shuffleGrouping("requestSpout")
+           .shuffleGrouping("requestSpout", "requestStream");
           //  .shuffleGrouping("kafkaSpout")
           //  .shuffleGrouping("priorityController", "linkStream")
           //  .shuffleGrouping("crawler", "documentStream");
@@ -129,7 +129,7 @@ public class FocusedCrawlerTopology {
           // .shuffleGrouping("stemmer", "wordStream")
           // .shuffleGrouping("stemmer", "probStream")
           // .shuffleGrouping("wordProb", "probStream");
-          .shuffleGrouping("documentProb", "updateStream");
+          // .shuffleGrouping("documentProb", "updateStream");
           // .shuffleGrouping("documentProb", "linkStream");
     // builder.setBolt("writeFile", new WriteFileBolt(), 1)
     //        .setNumTasks(8)
@@ -139,13 +139,13 @@ public class FocusedCrawlerTopology {
     conf.setDebug(false);
 
     if (args.length > 1) {
-      conf.setNumWorkers(8);
+      conf.setNumWorkers(2);
       StormSubmitter.submitTopologyWithProgressBar(args[1], conf, builder.createTopology());
     } else {
       conf.setMaxTaskParallelism(3);
        LocalCluster cluster = new LocalCluster();
        cluster.submitTopology("focused-crawler", conf, builder.createTopology());
-       Thread.sleep(10000);
+       Thread.sleep(100000);
        cluster.shutdown();
     }
   }

@@ -26,15 +26,22 @@ public class SeedSpout extends BaseRichSpout {
 
   @Override
   public void nextTuple() {
-    _collector.emit("requestStream", new Values("poll"));
+    if (count++ < 10) {
+     _collector.emit("requestStream", new Values("poll"), count);
+     Utils.sleep(10);
+   }
   }
 
   @Override
   public void ack(Object id) {
+    count++;
+    _collector.emit("requestStream", new Values("poll"), count);
+    System.out.println("Ack recieved to SeedSpout" + id);
   }
 
   @Override
   public void fail(Object id) {
+    System.out.println("Fail recieved to SeedSpout" + id);
   }
 
   @Override

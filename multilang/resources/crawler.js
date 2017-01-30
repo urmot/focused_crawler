@@ -20,7 +20,7 @@ class CrawlerBolt extends BasicBolt {
     let option = {
       url: url,
       headers: self.headers,
-      proxy: 'http://192.168.128.40:5432'
+      proxy: 'http://localhost:5432',
     }
 
     request(option, (err, res, body) => {
