@@ -7,7 +7,7 @@
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/spout/SeedSpout.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/spout/RandomIntegerSpout.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/StatefulLinkParserBolt.java
-/Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/StatefulTopology.java
+/Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/KafkaParserBolt.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/LinkParserBolt.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/StatefulDocumentProbBolt.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/PrinterBolt.java
@@ -19,3 +19,4 @@
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/BenchMarkBolt.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/WordProbBolt.java
 /Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/util/Stemmer.java
+/Users/mura/Documents/playground/storm/focused_crawler/src/main/java/com/focused_crawler/bolt/FilterBolt.java

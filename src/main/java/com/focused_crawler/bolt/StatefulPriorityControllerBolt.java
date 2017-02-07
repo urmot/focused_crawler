@@ -34,11 +34,17 @@ public class StatefulPriorityControllerBolt extends BaseStatefulBolt<KeyValueSta
   private OutputCollector collector;
   KeyValueState<String, Object> kvState;
   PriorityBlockingQueue<List> queue;
-  Set<Integer> crawled;
+  List<Integer> taskIds;
+  Map<Integer, List<Integer>> tasks;
+  Map<Integer, Integer> taskCount;
+  Map<Integer, Long> lastvisited;
   Map<Integer, Integer> serverloads;
+  List<List> tmpQueue = new ArrayList<List>();
+  Integer index = 0;
 
   @Override
   public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+    taskIds = context.getComponentTasks("crawler");
     queue = new PriorityBlockingQueue<List>(1000, new ValuesComparator());
     serverloads = new HashMap<Integer, Integer>();
     this.collector = collector;
@@ -64,29 +70,80 @@ public class StatefulPriorityControllerBolt extends BaseStatefulBolt<KeyValueSta
   public void execute(Tuple tuple) {
     switch (tuple.getSourceComponent()) {
     case "requestSpout":
-      List link = queue.poll();
+      before(tuple);
+      List link = getNextLink(tuple);
       if (link != null) {
-        collector.emit("linkStream", tuple, link);
-        Integer sid = (Integer) link.get(1);
-        Integer serverload = serverloads.getOrDefault(sid, 0);
-        serverloads.put(sid, serverload++);
-        kvState.put("serverloads", serverloads);
+        List task = tasks.remove(tuple.getInteger(0));
+        Integer taskId;
+        if (task == null) {
+          taskId = taskIds.get(index);
+          index++;
+          if (index.equals(taskIds.size())) index = 0;
+        } else {
+          taskId = (Integer) task.get(0);
+        }
+        collector.emitDirect(taskId, "linkStream", tuple, link);
+        after((Integer) link.get(1), tuple.getInteger(1), taskId);
+        kvState.put("queue", queue);
+        collector.ack(tuple);
+      } else {
+        collector.fail(tuple);
       }
       break;
-    case "kafkaSpout":
-      String[] values = tuple.getString(0).split("\\|");
-      Integer oid = Integer.parseInt(values[0]);
-      Integer sid = Integer.parseInt(values[1]);
-      String  url = values[2];
-      Double relevance = Double.parseDouble(values[3]);
-      if (!crawled.contains(oid)) {
-        crawled.add(oid);
-        queue.add(new Values(oid, sid, url, relevance));
-        kvState.put("crawled", queue);
-      }
+    case "filter":
+      queue.add(tuple.getValues());
+      kvState.put("queue", queue);
+      collector.ack(tuple);
       break;
     }
-    collector.ack(tuple);
+  }
+
+
+  public List getNextLink(Tuple tuple) {
+    List<List> tmp = new ArrayList<List>();
+    List link = new ArrayList();
+    while(queue.size() > 0) {
+      link = queue.poll();
+      Integer sid = (Integer) link.get(1);
+      Long endTime = lastvisited.get(sid);
+      if (endTime == null) break;
+      if (endTime.equals(0l) || System.currentTimeMillis() - endTime < 30000)
+       tmp.add(link);
+      else
+        break;
+    }
+    if (tmp.size() > 0) tmp.forEach(l -> queue.add(l));
+    if (queue.size() == 0) return null;
+    else return link;
+  }
+
+  public void before(Tuple tuple) {
+    Integer msId = tuple.getInteger(0);
+    List task = tasks.get(msId);
+    if (tasks == null) {
+      Integer taskId = (Integer) task.get(0);
+      Integer sid = (Integer) task.get(1);
+      Integer count = taskCount.get(taskId);
+      taskCount.put(taskId, --count);
+      lastvisited.put(sid, System.currentTimeMillis());
+
+      kvState.put("taskCount", taskCount);
+      kvState.put("lastvisited", lastvisited);
+    }
+  }
+
+  public void after(Integer sid, Integer msId, Integer taskId) {
+    tasks.put(msId, Arrays.asList(taskId, sid));
+    Integer count = taskCount.getOrDefault(taskId, 0);
+    taskCount.put(taskId, ++count);
+    lastvisited.put(sid, 0l);
+    Integer serverload = serverloads.getOrDefault(sid, 0);
+    serverloads.put(sid, ++serverload);
+
+    kvState.put("tasks", tasks);
+    kvState.put("taskCount", taskCount);
+    kvState.put("lastvisited", lastvisited);
+    kvState.put("serverloads", serverloads);
   }
 
   @Override
@@ -94,7 +151,9 @@ public class StatefulPriorityControllerBolt extends BaseStatefulBolt<KeyValueSta
     kvState = state;
     kvState.put("queue", queue);
     queue = (PriorityBlockingQueue<List>) kvState.get("queue", new PriorityBlockingQueue<List>(100, new ValuesComparator()));
-    crawled = (Set<Integer>) kvState.get("crawled", new HashSet<String>());
+    tasks = (Map<Integer, List<Integer>>) kvState.get("tasks", new HashMap<Integer, List<Integer>>());
+    taskCount = (Map<Integer, Integer>) kvState.get("taskCount", new HashMap<Integer, Integer>());
+    lastvisited = (Map<Integer, Long>) kvState.get("lastvisited", new HashMap<Integer, Long>());
     serverloads = (Map<Integer, Integer>) kvState.get("serverloads", new HashMap<Integer, Integer>());
   }
 
@@ -110,16 +169,16 @@ public class StatefulPriorityControllerBolt extends BaseStatefulBolt<KeyValueSta
   		List y = (List) arg1;
 
   		if ((Double) x.get(3) > (Double) y.get(3)) {
-  			return 1;
-  		} else if ((Double) x.get(3) < (Double) y.get(3)) {
   			return -1;
+  		} else if ((Double) x.get(3) < (Double) y.get(3)) {
+  			return 1;
   		} else {
         Integer xSid = (Integer) x.get(1);
         Integer ySid = (Integer) y.get(1);
         if (serverloads.getOrDefault(xSid, 0) < serverloads.getOrDefault(ySid, 0))
-          return 1;
-        else
           return -1;
+        else
+          return 1;
   		}
   	}
   }

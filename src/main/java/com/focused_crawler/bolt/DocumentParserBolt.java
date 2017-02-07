@@ -12,12 +12,41 @@ import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Document;
+import org.apache.storm.utils.Utils;
+import org.apache.storm.blobstore.ClientBlobStore;
+import org.apache.storm.blobstore.InputStreamWithMeta;
+import org.apache.storm.generated.AuthorizationException;
+import org.apache.storm.generated.KeyNotFoundException;
 
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
 
 public class DocumentParserBolt extends BaseBasicBolt {
+  public Set stopwords = new HashSet<String>();
+
+  @Override
+  public void prepare(Map stormConf, TopologyContext context) {
+    Config theconf = new Config();
+    theconf.putAll(Utils.readStormConfig());
+    ClientBlobStore clientBlobStore = Utils.getClientBlobStore(theconf);
+    try {
+      InputStreamWithMeta blobInputStream = clientBlobStore.getBlob("stopwords");
+      BufferedReader r = new BufferedReader(new InputStreamReader(blobInputStream));
+      r.lines().forEach((stopword) -> stopwords.add(stopword));
+      stopwords.add("");
+      r.close();
+    } catch (IOException | AuthorizationException | KeyNotFoundException exp) {
+      throw new RuntimeException(exp);
+    }
+  }
 
   @Override
   public void execute(Tuple tuple, BasicOutputCollector collector) {
@@ -25,17 +54,21 @@ public class DocumentParserBolt extends BaseBasicBolt {
     Integer sid = (int) (long) tuple.getLong(1);
     String url = tuple.getString(2);
     String html = tuple.getString(3);
-
     Document document = Jsoup.parse(html);
-    Elements links = document.select("a[href]");
-    for (Element e : links)
-      collector.emit("linkStream", new Values(oid, e.attr("href")));
+    List<String> words = new ArrayList<String>(Arrays.asList(document.text().split("[^a-zA-Z]")));
 
-    List<String> words = new ArrayList<String>(Arrays.asList(document.text().split("\\W")));
-    if (words.size() > 100) {
+    words.removeAll(stopwords);
+    if (words.size() > 70)  {
       collector.emit("docSizeStream", new Values(oid, sid, words.size(), url));
-      words.stream().forEach(word -> {
-        collector.emit("wordStream", new Values(oid, word));
+      Elements links = document.select("a[href]");
+      for (Element e : links) collector.emit("linkStream", new Values(oid, e.attr("href")));
+      Map<String, Integer> wordCount = new HashMap<String, Integer>();
+      words.forEach((word) -> {
+        Integer count = wordCount.getOrDefault(word, 0);
+        wordCount.put(word, ++count);
+      });
+      wordCount.forEach((word, count) -> {
+        collector.emit("wordStream", new Values(oid, word, count));
       });
     }
   }
@@ -43,7 +76,7 @@ public class DocumentParserBolt extends BaseBasicBolt {
   @Override
   public void declareOutputFields(OutputFieldsDeclarer declarer) {
     declarer.declareStream("linkStream", new Fields("src", "link"));
-    declarer.declareStream("wordStream", new Fields("oid", "word"));
+    declarer.declareStream("wordStream", new Fields("oid", "word", "count"));
     declarer.declareStream("docSizeStream", new Fields("oid", "sid", "size", "url"));
   }
 }

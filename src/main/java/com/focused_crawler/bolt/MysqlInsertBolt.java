@@ -27,7 +27,8 @@ public class MysqlInsertBolt {
     schema.add(new Column("sid", java.sql.Types.INTEGER));
     schema.add(new Column("url", java.sql.Types.VARCHAR));
     schema.add(new Column("relevance", java.sql.Types.DOUBLE));
-    query = "insert into crawl (oid, sid, url, relevance) values (?, ?, ?, ?)";
+    schema.add(new Column("cid", java.sql.Types.INTEGER));
+    query = "insert into crawl (oid, sid, url, relevance, cid) values (?, ?, ?, ?, ?)";
     query += " on duplicate key update numtries = numtries + 1";
 
     ConnectionProvider connectionProvider = new HikariCPConnectionProvider(hikariConfig);

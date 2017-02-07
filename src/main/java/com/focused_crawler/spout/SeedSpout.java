@@ -17,35 +17,37 @@ import java.util.ArrayList;
 
 public class SeedSpout extends BaseRichSpout {
   SpoutOutputCollector _collector;
-  Integer count = 0;
+  Integer count;
 
   @Override
   public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
     _collector = collector;
+    count = 0;
   }
 
   @Override
   public void nextTuple() {
-    if (count++ < 10) {
-     _collector.emit("requestStream", new Values("poll"), count);
-     Utils.sleep(10);
+    if (count < 120) {
+      count++;
+     _collector.emit("requestStream", new Values(0, count), count);
    }
   }
 
   @Override
   public void ack(Object id) {
     count++;
-    _collector.emit("requestStream", new Values("poll"), count);
-    System.out.println("Ack recieved to SeedSpout" + id);
+    _collector.emit("requestStream", new Values(id, count), count);
   }
 
   @Override
   public void fail(Object id) {
-    System.out.println("Fail recieved to SeedSpout" + id);
+    Utils.sleep(100);
+    count++;
+    _collector.emit("requestStream", new Values(id, count), count);
   }
 
   @Override
   public void declareOutputFields(OutputFieldsDeclarer declarer) {
-    declarer.declareStream("requestStream", new Fields("request"));
+    declarer.declareStream("requestStream", new Fields("old", "new"));
   }
 }

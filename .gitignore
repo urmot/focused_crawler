@@ -1,2 +1,6 @@
 cocproxy/*
 target/*
+result/*
+storm-local/*
+crawl.db
+*.log

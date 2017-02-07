@@ -27,41 +27,19 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 
 public class StemmerBolt extends BaseBasicBolt {
-  public Set stopwords = new HashSet<String>();
-
-  @Override
-  public void prepare(Map stormConf, TopologyContext context) {
-    Config theconf = new Config();
-    theconf.putAll(Utils.readStormConfig());
-    ClientBlobStore clientBlobStore = Utils.getClientBlobStore(theconf);
-    try {
-      InputStreamWithMeta blobInputStream = clientBlobStore.getBlob("stopwords");
-      BufferedReader r = new BufferedReader(new InputStreamReader(blobInputStream));
-      stopwords.addAll(Arrays.asList(r.readLine().split(",")));
-      stopwords.add("");
-      r.close();
-    } catch (IOException | AuthorizationException | KeyNotFoundException exp) {
-      throw new RuntimeException(exp);
-    }
-  }
 
   @Override
   public void execute(Tuple tuple, BasicOutputCollector collector) {
     Integer oid = tuple.getInteger(0);
     String word = tuple.getString(1).toLowerCase();
-    if (word.length() > 32 || stopwords.contains(word)) {
-      collector.emit("probStream", new Values(oid, 0d));
-    } else {
-      Stemmer s = new Stemmer();
-      s.add(word.toCharArray(), word.length());
-      s.stem();
-      collector.emit("wordStream", new Values(oid, s.toString()));
-    }
+    Stemmer s = new Stemmer();
+    s.add(word.toCharArray(), word.length());
+    s.stem();
+    collector.emit("wordStream", new Values(oid, s.toString(), tuple.getInteger(2)));
   }
 
   @Override
   public void declareOutputFields(OutputFieldsDeclarer declare) {
-    declare.declareStream("probStream", new Fields("oid", "prob"));
-    declare.declareStream("wordStream", new Fields("oid", "word"));
+    declare.declareStream("wordStream", new Fields("oid", "word", "count"));
   }
 }

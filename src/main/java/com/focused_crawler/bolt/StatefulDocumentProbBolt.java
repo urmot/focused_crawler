@@ -11,86 +11,131 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.math3.util.CombinatoricsUtils;
+import java.sql.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 
 public class StatefulDocumentProbBolt extends BaseStatefulBolt<KeyValueState<String, Map>> {
   private static final Logger LOG = LoggerFactory.getLogger(DocumentProbBolt.class);
   private OutputCollector collector;
-  /* metadata formatted by  { oid, sid, size, url, prob, count }*/
-  KeyValueState<String, Map> kvState;
+  private Integer targetID;
+  private Map<Integer, Double> probTable = new HashMap<Integer, Double>();
+  /* metadata formatted by  { oid, sid, size, url }*/
+  Map<Integer, Integer> counter;
+  Map<Integer, Double> combStore;
   Map<Integer, List> metaStore;
-  Map<Integer, List> linkStore;
+  Map<Integer, Map<Integer, Double>> probStore;
+  KeyValueState<String, Map> kvState;
+
+  public StatefulDocumentProbBolt(Integer targetID) {
+    this.targetID = targetID;
+  }
 
   @Override
   public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
     this.collector = collector;
+    try (Connection con = DriverManager.getConnection("jdbc:mysql://dbserver/focused_crawler", "fc", "focused_crawler")) {
+      Statement stm = con.createStatement();
+      String sql = "select cid, prob from category where pid =";
+      sql += "(select pid from category where cid = " +targetID+")";
+      ResultSet rs = stm.executeQuery(sql);
+      while(rs.next())
+        probTable.put(rs.getInt("cid"), rs.getDouble("prob"));
+      rs.close();
+      stm.close();
+      con.close();
+    } catch (SQLException exp) {
+      throw new RuntimeException(exp);
+    }
   }
 
   @Override
   public void initState(KeyValueState<String, Map> state) {
     kvState = state;
+    counter = kvState.get("counter", new HashMap<Integer, Integer>());
+    combStore = kvState.get("combStore", new HashMap<Integer, Double>());
+    probStore = kvState.get("probStore", new HashMap<Integer, Map<Integer, Double>>());
     metaStore = kvState.get("metaStore", new HashMap<Integer, List>());
-    linkStore = kvState.get("linkStore", new HashMap<Integer, List>());
   }
 
   @Override
   public void execute(Tuple tuple) {
     switch (tuple.getSourceStreamId()) {
     case "docSizeStream":
-      Integer oid = tuple.getInteger(0);
-      List meta = tuple.getValues();
-      meta.add(4, 0d);
-      meta.add(5, 0);
-      metaStore.put(oid, meta);
-      kvState.put("metaStore", metaStore);
+      storeMetadata(tuple);
       break;
     case "probStream":
       documentProb(tuple);
-      break;
-    case "linkStream":
-      String link = tuple.getString(0);
-      Integer src = tuple.getInteger(1);
-      List links = linkStore.getOrDefault(src, new ArrayList());
-      links.add(link);
-      linkStore.put(src, links);
-      kvState.put("linkStore", linkStore);
       break;
     }
     collector.ack(tuple);
   }
 
+  public void storeMetadata(Tuple tuple) {
+    Integer oid = tuple.getInteger(0);
+    Integer size = tuple.getInteger(2);
+    Map<Integer, Double> row = probStore.getOrDefault(oid, new HashMap<Integer, Double>());
+    probTable.forEach((cid, classProb) -> {
+      Double prob = row.getOrDefault(cid, 0d);
+      prob += classProb;
+      row.put(cid, prob);
+    });
+    probStore.put(oid, row);
+    List meta = tuple.getValues();
+    meta.set(2, size * probTable.size());
+    metaStore.put(oid, meta);
+    Double prob = combStore.getOrDefault(oid, 0d);
+    prob += CombinatoricsUtils.factorialLog(size); // n(d)!
+    combStore.put(oid, prob);
+    kvState.put("probStore", probStore);
+    kvState.put("metaStore", metaStore);
+    kvState.put("combStore", combStore);
+  }
+
   public void documentProb(Tuple tuple) {
     Integer oid = tuple.getInteger(0);
-    List meta = (List) metaStore.getOrDefault(oid, Arrays.asList(oid, 0, 1000, "http://example.com", 0d, 0));
+    Integer cid = tuple.getInteger(1);
+    List meta = metaStore.getOrDefault(oid, Arrays.asList(oid, 0, 100000, "url"));
     Integer size = (Integer) meta.get(2);
-    Double prob = (Double) meta.get(4);
-    Integer count = (Integer) meta.get(5);
-    prob += tuple.getDouble(1);
-    count++;
-    if (size.equals(count)) {
-      collector.emit("updateStream", tuple, new Values(oid, meta.get(1), meta.get(3), prob));
-      List links = linkStore.get(oid);
-      if (links != null)
-        for (Object link : links) {
-          String l = (String) link;
-          collector.emit("linkStream", tuple, new Values("key", l+"|"+prob.toString()));
-        }
-    } else {
-      meta.set(4, prob);
-      meta.set(5, count);
-      metaStore.put(oid, meta);
-      kvState.put("metaStore", metaStore);
+    Integer count = counter.getOrDefault(oid, 0);
+    Map<Integer, Double> probTable = probStore.getOrDefault(oid, new HashMap<Integer, Double>());
+    Double prob = probTable.getOrDefault(cid, 0d);
+
+    prob += tuple.getDouble(2);
+    count += tuple.getInteger(3);
+    if (tuple.getInteger(3) > 1) {
+      Double comb = combStore.getOrDefault(oid, 0d);
+      comb -= CombinatoricsUtils.factorialLog(tuple.getInteger(3));
+      combStore.put(oid, comb);
+      kvState.put("combStore", combStore);
     }
+    probTable.put(cid, prob);
+    if (size.equals(count)) {
+      Integer classifyID = probTable.entrySet().stream()
+        .max(Comparator.comparing(e -> e.getValue())).get().getKey();
+      prob = probTable.get(targetID);
+      Double comb = combStore.remove(oid);
+      collector.emit("updateStream", tuple, new Values(oid, meta.get(1), meta.get(3), comb +  prob, classifyID));
+      counter.remove(oid);
+      probStore.remove(oid);
+      metaStore.remove(oid);
+      kvState.put("metaStore", metaStore);
+    } else {
+      counter.put(oid, count);
+      probStore.put(oid, probTable);
+    }
+    kvState.put("counter", counter);
+    kvState.put("probStore", probStore);
   }
 
   @Override
   public void declareOutputFields(OutputFieldsDeclarer declare) {
-    declare.declareStream("updateStream", new Fields("oid", "sid", "url", "relevance"));
-    declare.declareStream("linkStream", new Fields("key", "message"));
+    declare.declareStream("updateStream", new Fields("oid", "sid", "url", "relevance", "cid"));
   }
 }

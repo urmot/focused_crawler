@@ -15,7 +15,7 @@ import java.io.IOException;
 
 public class CrawlerBolt extends ShellBolt implements IRichBolt {
   public CrawlerBolt() {
-    super("node", "crawler.js");
+    super("node", "simpleCrawler.js");
   }
 
   @Override

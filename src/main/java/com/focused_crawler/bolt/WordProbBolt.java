@@ -15,7 +15,11 @@ import org.apache.storm.blobstore.InputStreamWithMeta;
 import org.apache.storm.blobstore.BlobStoreAclHandler;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.KeyNotFoundException;
+import org.apache.commons.math3.util.CombinatoricsUtils;
+import java.sql.*;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.io.BufferedReader;
@@ -24,27 +28,38 @@ import java.io.IOException;
 
 
 public class WordProbBolt extends BaseBasicBolt {
+  private Integer targetID;
   String category;
-  Map<String, Double> probTable = new HashMap<String, Double>();
+  Map<Integer, Map<String, Double>> probTable = new HashMap<Integer, Map<String, Double>>();
 
-  public WordProbBolt(String cat) {
-    category = cat;
+  public WordProbBolt(Integer targetID) {
+    this.targetID = targetID;
   }
 
   @Override
   public void prepare(Map stormConf, TopologyContext context) {
-    Config theconf = new Config();
-    theconf.putAll(Utils.readStormConfig());
-    ClientBlobStore clientBlobStore = Utils.getClientBlobStore(theconf);
-    try {
-      InputStreamWithMeta blobInputStream = clientBlobStore.getBlob(category);
-      BufferedReader r = new BufferedReader(new InputStreamReader(blobInputStream));
-      r.lines().forEach(line -> {
-        String[] ary = line.split(":");
-        probTable.put(ary[0], Double.parseDouble(ary[1]));
+    try (Connection con = DriverManager.getConnection("jdbc:mysql://dbserver/focused_crawler", "fc", "focused_crawler")) {
+      Statement stm = con.createStatement();
+      String sql = "select cid from category where pid =";
+      sql += "(select pid from category where cid = " +targetID+")";
+      ResultSet rs = stm.executeQuery(sql);
+      List<Integer> cids = new ArrayList<Integer>();
+      while(rs.next()) cids.add(rs.getInt("cid"));
+      rs.close();
+      cids.forEach(cid -> {
+        Map<String, Double> probMap = new HashMap<String, Double>();
+        String query = "select word, prob from prob where cid = " + cid;
+        try (ResultSet r = stm.executeQuery(query)) {
+          while(r.next()) probMap.put(r.getString("word"), r.getDouble("prob"));
+          r.close();
+        } catch(SQLException exp) {
+          throw new RuntimeException(exp);
+        }
+        probTable.put(cid, probMap);
       });
-      r.close();
-    } catch (IOException | AuthorizationException | KeyNotFoundException exp) {
+      stm.close();
+      con.close();
+    } catch (SQLException exp) {
       throw new RuntimeException(exp);
     }
   }
@@ -53,13 +68,18 @@ public class WordProbBolt extends BaseBasicBolt {
   public void execute(Tuple tuple, BasicOutputCollector collector) {
     Integer oid = tuple.getInteger(0);
     String word = tuple.getString(1);
-    Double prob = probTable.get(word);
-    if (prob == null) prob = probTable.get("_Smoothing");
-    collector.emit("probStream", new Values(oid, prob));
+    Integer count = tuple.getInteger(2);
+
+    probTable.forEach((cid, probMap) -> {
+      Double prob = probMap.get(word);
+      if (prob == null) prob = probMap.get("_Smoothing");
+      prob *= count;
+      collector.emit("probStream", new Values(oid, cid, prob, count));
+    });
   }
 
   @Override
   public void declareOutputFields(OutputFieldsDeclarer declare) {
-    declare.declareStream("probStream", new Fields("oid", "prob"));
+    declare.declareStream("probStream", new Fields("oid", "cid", "prob", "count"));
   }
 }

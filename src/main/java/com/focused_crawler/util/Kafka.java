@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.Properties;
 
 public class Kafka {
-  private String host = "kafka:9092";
+  private String host = "localhost";
   private String topic = "test";
 
   public Kafka() {
@@ -30,7 +30,7 @@ public class Kafka {
 
   public Properties getProperties() {
     Properties props = new Properties();
-    props.put("bootstrap.servers", "kafka:9092");
+    props.put("bootstrap.servers", host + ":9092");
     props.put("acks", "1");
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
     props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
